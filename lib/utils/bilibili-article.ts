@@ -1,5 +1,7 @@
 import { load } from 'cheerio';
 
+import { parseBilibiliOpusArticleFromHtml } from '@/utils/bilibili-opus';
+
 interface BilibiliArticleData {
     title?: string;
     description?: string;
@@ -44,14 +46,16 @@ export function parseBilibiliArticlePage(data: string) {
         return {};
     }
 
-    const title = $('.opus-module-title__text').first().text().trim() || $('meta[property="og:title"]').attr('content')?.trim() || documentTitle.replace(/\s*-\s*哔哩哔哩\s*$/, '');
-    const description = $('.opus-module-content').first().html()?.trim();
-    const author = $('.opus-module-author__name').first().text().trim();
-    const pubDate = $('.opus-module-author__pub__text')
-        .first()
-        .text()
-        .trim()
-        .replace(/^编辑于\s*/, '');
+    const opusArticle = parseBilibiliOpusArticleFromHtml(data);
+    const title = $('.opus-module-title__text').first().text().trim() || opusArticle.title || $('meta[property="og:title"]').attr('content')?.trim() || documentTitle.replace(/\s*-\s*哔哩哔哩\s*$/, '');
+    const description = opusArticle.description || $('.opus-module-content').first().html()?.trim();
+    const author = $('.opus-module-author__name').first().text().trim() || opusArticle.author;
+    const pubDate =
+        $('.opus-module-author__pub__text')
+            .first()
+            .text()
+            .trim()
+            .replace(/^编辑于\s*/, '') || opusArticle.pubDate;
 
     return {
         title: title || undefined,

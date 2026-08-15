@@ -68,6 +68,13 @@ interface BilibiliOpusModule {
     module_content?: {
         paragraphs?: BilibiliOpusParagraph[];
     };
+    module_top?: {
+        display?: {
+            album?: {
+                pics?: BilibiliOpusImage[];
+            };
+        };
+    };
 }
 
 interface BilibiliOpusItem {
@@ -114,14 +121,14 @@ const normalizeBilibiliImages = (images: BilibiliOpusImage[]) => {
     });
 };
 
-const extractBilibiliOpusItemImages = (item?: BilibiliOpusItem) => {
-    const images =
-        item?.modules
-            ?.filter((module) => module.module_type === 'MODULE_TYPE_CONTENT')
-            .flatMap((module) => (module.module_content?.paragraphs ?? []).flatMap((paragraph) => [...(paragraph.pic?.pics ?? []), ...(paragraph.line?.pic ? [paragraph.line.pic] : [])])) ?? [];
+const extractBilibiliOpusTopImages = (item?: BilibiliOpusItem) => item?.modules?.filter((module) => module.module_type === 'MODULE_TYPE_TOP').flatMap((module) => module.module_top?.display?.album?.pics ?? []) ?? [];
 
-    return normalizeBilibiliImages(images);
-};
+const extractBilibiliOpusContentImages = (item?: BilibiliOpusItem) =>
+    item?.modules
+        ?.filter((module) => module.module_type === 'MODULE_TYPE_CONTENT')
+        .flatMap((module) => (module.module_content?.paragraphs ?? []).flatMap((paragraph) => [...(paragraph.pic?.pics ?? []), ...(paragraph.line?.pic ? [paragraph.line.pic] : [])])) ?? [];
+
+const extractBilibiliOpusItemImages = (item?: BilibiliOpusItem) => normalizeBilibiliImages([...extractBilibiliOpusTopImages(item), ...extractBilibiliOpusContentImages(item)]);
 
 export const extractBilibiliOpusImages = (response: BilibiliOpusDetailResponse): BilibiliOpusImage[] => extractBilibiliOpusItemImages(response.data?.item);
 
@@ -172,13 +179,18 @@ export const parseBilibiliOpusArticle = (response: BilibiliOpusDetailResponse) =
         return {};
     }
 
-    const modules = response.data?.item?.modules ?? [];
+    const item = response.data?.item;
+    const modules = item?.modules ?? [];
     const title = modules.find((module) => module.module_type === 'MODULE_TYPE_TITLE')?.module_title?.text;
     const author = modules.find((module) => module.module_type === 'MODULE_TYPE_AUTHOR')?.module_author;
-    const description = modules
-        .filter((module) => module.module_type === 'MODULE_TYPE_CONTENT')
-        .flatMap((module) => module.module_content?.paragraphs ?? [])
-        .map((paragraph) => renderBilibiliOpusParagraph(paragraph))
+    const topImages = normalizeBilibiliImages(extractBilibiliOpusTopImages(item));
+    const description = [
+        topImages.length ? `<figure>${renderBilibiliImages(topImages)}</figure>` : '',
+        ...modules
+            .filter((module) => module.module_type === 'MODULE_TYPE_CONTENT')
+            .flatMap((module) => module.module_content?.paragraphs ?? [])
+            .map((paragraph) => renderBilibiliOpusParagraph(paragraph)),
+    ]
         .filter(Boolean)
         .join('');
 
@@ -190,24 +202,40 @@ export const parseBilibiliOpusArticle = (response: BilibiliOpusDetailResponse) =
     };
 };
 
-export const extractBilibiliOpusImagesFromHtml = (data: string): BilibiliOpusImage[] => {
+const parseBilibiliOpusInitialState = (data: string) => {
     const $ = load(data);
     const script = $('script:contains("window.__INITIAL_STATE__")').first().html();
     const initialState = script?.match(/window\.__INITIAL_STATE__\s*=\s*(\{.*?\})\s*;\s*\(function\(/s)?.[1];
-
-    if (initialState) {
-        try {
-            const state = JSON.parse(initialState) as {
-                detail?: BilibiliOpusItem;
-            };
-            const images = extractBilibiliOpusItemImages(state.detail);
-            if (images.length) {
-                return images;
-            }
-        } catch {
-            // Fall back to the server-rendered images below.
-        }
+    if (!initialState) {
+        return;
     }
+
+    try {
+        return (JSON.parse(initialState) as { detail?: BilibiliOpusItem }).detail;
+    } catch {
+        return;
+    }
+};
+
+export const parseBilibiliOpusArticleFromHtml = (data: string) => {
+    const item = parseBilibiliOpusInitialState(data);
+    if (!item) {
+        return {};
+    }
+
+    return parseBilibiliOpusArticle({
+        code: 0,
+        data: { item },
+    });
+};
+
+export const extractBilibiliOpusImagesFromHtml = (data: string): BilibiliOpusImage[] => {
+    const images = extractBilibiliOpusItemImages(parseBilibiliOpusInitialState(data));
+    if (images.length) {
+        return images;
+    }
+
+    const $ = load(data);
 
     return normalizeBilibiliImages(
         $('.opus-module-content img')

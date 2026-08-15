@@ -78,7 +78,7 @@ async function handler(ctx) {
             let article = {};
 
             try {
-                article = await cacheGeneral.tryGet(`bilibili:article:v4:${item.opus_id}:${cacheContext}`, async () => {
+                article = await cacheGeneral.tryGet(`bilibili:article:v5:${item.opus_id}:${cacheContext}`, async () => {
                     const detail = await got({
                         method: 'get',
                         url: `https://api.bilibili.com/x/polymer/web-dynamic/v1/opus/detail?id=${encodeURIComponent(item.opus_id)}`,

@@ -168,6 +168,96 @@ describe('Bilibili Opus images', () => {
         });
     });
 
+    it('includes title album images from the Opus top module', () => {
+        const response = {
+            code: 0,
+            data: {
+                item: {
+                    id_str: '1236434128653516805',
+                    modules: [
+                        {
+                            module_type: 'MODULE_TYPE_TOP',
+                            module_top: {
+                                display: {
+                                    album: {
+                                        pics: [
+                                            {
+                                                url: 'http://i0.hdslb.com/bfs/new_dyn/d77f6f90a886f82d047e05c13283fa08546418.jpg',
+                                                width: 5712,
+                                                height: 4284,
+                                            },
+                                            {
+                                                url: 'http://i0.hdslb.com/bfs/new_dyn/135f21e519b0650f9694680d8b8bf3e8546418.jpg',
+                                                width: 4032,
+                                                height: 3024,
+                                            },
+                                        ],
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            module_type: 'MODULE_TYPE_CONTENT',
+                            module_content: {
+                                paragraphs: [
+                                    {
+                                        para_type: 1,
+                                        text: {
+                                            nodes: [
+                                                {
+                                                    word: {
+                                                        words: 'See what surprise is waiting next week',
+                                                    },
+                                                },
+                                            ],
+                                        },
+                                    },
+                                ],
+                            },
+                        },
+                    ],
+                },
+            },
+        };
+
+        expect(extractBilibiliOpusImages(response)).toEqual([
+            {
+                url: 'https://i0.hdslb.com/bfs/new_dyn/d77f6f90a886f82d047e05c13283fa08546418.jpg',
+                width: 5712,
+                height: 4284,
+            },
+            {
+                url: 'https://i0.hdslb.com/bfs/new_dyn/135f21e519b0650f9694680d8b8bf3e8546418.jpg',
+                width: 4032,
+                height: 3024,
+            },
+        ]);
+        expect(parseBilibiliOpusArticle(response)).toMatchObject({
+            description:
+                '<figure><img src="https://i0.hdslb.com/bfs/new_dyn/d77f6f90a886f82d047e05c13283fa08546418.jpg" width="5712" height="4284"><img src="https://i0.hdslb.com/bfs/new_dyn/135f21e519b0650f9694680d8b8bf3e8546418.jpg" width="4032" height="3024"></figure><p>See what surprise is waiting next week</p>',
+        });
+    });
+
+    it('extracts title album images from an Opus page fallback', () => {
+        const images = extractBilibiliOpusImagesFromHtml(`
+            <html>
+                <body>
+                    <script>
+                        window.__INITIAL_STATE__={"detail":{"id_str":"1236434128653516805","modules":[{"module_type":"MODULE_TYPE_TOP","module_top":{"display":{"album":{"pics":[{"url":"http://i0.hdslb.com/bfs/new_dyn/d77f6f90a886f82d047e05c13283fa08546418.jpg","width":5712,"height":4284}]}}}}]}};(function() {})();
+                    </script>
+                </body>
+            </html>
+        `);
+
+        expect(images).toEqual([
+            {
+                url: 'https://i0.hdslb.com/bfs/new_dyn/d77f6f90a886f82d047e05c13283fa08546418.jpg',
+                width: 5712,
+                height: 4284,
+            },
+        ]);
+    });
+
     it('extracts current content-module images from an Opus page fallback', () => {
         const images = extractBilibiliOpusImagesFromHtml(`
             <html>

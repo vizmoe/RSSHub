@@ -71,6 +71,29 @@ describe('parseBilibiliArticlePage', () => {
         });
     });
 
+    it('includes title album images from the Opus page state', () => {
+        const article = parseBilibiliArticlePage(`
+            <html>
+                <head><title>LuvLetter的动态 - 哔哩哔哩</title></head>
+                <body>
+                    <div class="opus-module-author__name">LuvLetter</div>
+                    <div class="opus-module-author__pub__text">2026年08月14日 22:35</div>
+                    <div class="opus-module-content"><p>See what surprise is waiting next week</p></div>
+                    <script>
+                        window.__INITIAL_STATE__={"detail":{"id_str":"1236434128653516805","modules":[{"module_type":"MODULE_TYPE_TOP","module_top":{"display":{"album":{"pics":[{"url":"http://i0.hdslb.com/bfs/new_dyn/d77f6f90a886f82d047e05c13283fa08546418.jpg","width":5712,"height":4284},{"url":"http://i0.hdslb.com/bfs/new_dyn/135f21e519b0650f9694680d8b8bf3e8546418.jpg","width":4032,"height":3024}]}}}},{"module_type":"MODULE_TYPE_CONTENT","module_content":{"paragraphs":[{"para_type":1,"text":{"nodes":[{"word":{"words":"See what surprise is waiting next week"}}]}}]}}]}};(function() {})();
+                    </script>
+                </body>
+            </html>
+        `);
+
+        expect(article).toMatchObject({
+            description:
+                '<figure><img src="https://i0.hdslb.com/bfs/new_dyn/d77f6f90a886f82d047e05c13283fa08546418.jpg" width="5712" height="4284"><img src="https://i0.hdslb.com/bfs/new_dyn/135f21e519b0650f9694680d8b8bf3e8546418.jpg" width="4032" height="3024"></figure><p>See what surprise is waiting next week</p>',
+            author: 'LuvLetter',
+            pubDate: '2026年08月14日 22:35',
+        });
+    });
+
     it('falls back to the document title when the opus title is unavailable', () => {
         const article = parseBilibiliArticlePage('<html><head><title>Fallback title - 哔哩哔哩</title></head><body></body></html>');
 

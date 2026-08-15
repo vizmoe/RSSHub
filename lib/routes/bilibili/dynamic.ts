@@ -201,7 +201,7 @@ const getItemImages = async (item: Item2 | Orig | undefined, cookie: string) => 
     };
 
     try {
-        const detail = await cache.tryGet(`bilibili:dynamic:opus:v2:${item.id_str}`, async () => {
+        const detail = await cache.tryGet(`bilibili:dynamic:opus:v3:${item.id_str}`, async () => {
             try {
                 const response = await got({
                     method: 'get',
