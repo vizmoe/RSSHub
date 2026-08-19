@@ -3,6 +3,8 @@ import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
+import { rewriteSspaiImages } from './utils';
+
 export const route: Route = {
     path: '/matrix',
     categories: ['new-media'],
@@ -49,6 +51,7 @@ async function handler() {
                     description = `<img src="${banner}" alt="Article Cover Image" style="display: block; margin: 0 auto;"><br>`;
                 }
                 description += articleData.body;
+                description = rewriteSspaiImages(description);
 
                 return {
                     title: item.title.trim(),

@@ -4,6 +4,8 @@ import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
+import { rewriteSspaiImages } from './utils';
+
 async function getUserId(slug) {
     const response = await got({
         method: 'get',
@@ -68,6 +70,7 @@ async function handler(ctx) {
                     description = `<img src="${banner}" alt="Article Cover Image" style="display: block; margin: 0 auto;"><br>`;
                 }
                 description += articleData.body;
+                description = rewriteSspaiImages(description);
 
                 return {
                     title: item.title.trim(),

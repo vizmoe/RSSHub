@@ -4,6 +4,8 @@ import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
+import { rewriteSspaiImages } from './utils';
+
 export const route: Route = {
     path: '/index',
     categories: ['new-media'],
@@ -52,6 +54,7 @@ async function handler() {
                     description += articleData.body_extends.map((bodyExtendsItem) => `<h2>${bodyExtendsItem.title}</h2>${bodyExtendsItem.body}`).join('');
                 }
                 description += articleData.body;
+                description = rewriteSspaiImages(description);
 
                 return {
                     title: item.title.trim(),
