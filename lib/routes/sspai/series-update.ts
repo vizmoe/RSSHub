@@ -2,6 +2,8 @@ import type { Route } from '@/types';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
+import { rewriteSspaiImages } from './utils';
+
 export const route: Route = {
     path: '/series/:id',
     categories: ['new-media'],
@@ -44,7 +46,7 @@ async function handler(ctx) {
 
             return {
                 title: item.title_prefix + ' - ' + item.title,
-                description,
+                description: rewriteSspaiImages(description),
                 author: seriesInfo.data.data.author.nickname,
                 link: `https://sspai.com/post/${item.id}`,
                 pubDate: parseDate(item.created_at * 1000),
