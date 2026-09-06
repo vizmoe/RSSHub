@@ -2,7 +2,7 @@ name: Fork - Publish GHCR
 
 on:
     push:
-        branches: [master]
+        branches: [codex/shaonan-fulltext]
         paths:
             - '.github/workflows/fork-ghcr.yml'
             - 'Dockerfile'
@@ -15,6 +15,7 @@ on:
             - 'pnpm-lock.yaml'
             - 'tsconfig.json'
             - 'tsdown*.ts'
+            - 'vitest*.ts'
     workflow_dispatch:
     workflow_call:
         inputs:
@@ -32,6 +33,7 @@ concurrency:
 
 env:
     IMAGE: ghcr.io/vizmoe/rsshub
+    CUSTOM_BRANCH: codex/shaonan-fulltext
 
 jobs:
     prepare:
@@ -52,8 +54,42 @@ jobs:
                   echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
                   echo "short-sha=$(git rev-parse --short=12 HEAD)" >> "$GITHUB_OUTPUT"
 
-    build:
+    verify:
         needs: prepare
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  ref: ${{ needs.prepare.outputs.sha }}
+                  persist-credentials: false
+            - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+            - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+              with:
+                  node-version: 24
+                  cache: pnpm
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+            - name: Build route registry
+              run: pnpm build:routes
+            - name: Typecheck
+              run: pnpm typecheck
+            - name: Test fork integrations and feed infrastructure
+              run: >-
+                  pnpm run vitest
+                  lib/utils/bilibili-article.test.ts
+                  lib/utils/bilibili-opus.test.ts
+                  lib/utils/substack.test.ts
+                  lib/utils/readable-social.test.ts
+                  lib/utils/xai-news.test.ts
+                  lib/utils/rss-parser.test.ts
+                  lib/utils/parse-date.test.ts
+                  lib/utils/cache/index.test.ts
+                  lib/registry.test.ts
+                  lib/config.test.ts
+
+    build:
+        needs: [prepare, verify]
         runs-on: ${{ matrix.runner }}
         timeout-minutes: 45
         permissions:
@@ -147,13 +183,13 @@ jobs:
                   path: ${{ runner.temp }}/digests
                   merge-multiple: true
 
-            - name: Check whether this is still the latest master commit
+            - name: Check whether this is still the latest custom branch commit
               id: latest
               env:
                   GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
                   BUILD_SHA: ${{ needs.prepare.outputs.sha }}
               run: |
-                  current_sha=$(gh api "repos/$GITHUB_REPOSITORY/commits/master" --jq .sha)
+                  current_sha=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/$CUSTOM_BRANCH" --jq .object.sha)
                   if [ "$BUILD_SHA" = "$current_sha" ]; then
                       echo "publish=true" >> "$GITHUB_OUTPUT"
                   else
