@@ -58,6 +58,16 @@ jobs:
         needs: prepare
         runs-on: ubuntu-latest
         timeout-minutes: 15
+        services:
+            redis:
+                image: redis:7-alpine
+                ports:
+                    - 6379/tcp
+                options: >-
+                    --health-cmd "redis-cli ping"
+                    --health-interval 5s
+                    --health-timeout 3s
+                    --health-retries 10
         steps:
             - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
@@ -75,6 +85,8 @@ jobs:
             - name: Typecheck
               run: pnpm typecheck
             - name: Test fork integrations and feed infrastructure
+              env:
+                  REDIS_URL: redis://localhost:${{ job.services.redis.ports['6379'] }}/
               run: >-
                   pnpm run vitest
                   lib/utils/bilibili-article.test.ts
