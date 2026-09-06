@@ -141,7 +141,7 @@ jobs:
                   set -euo pipefail
                   trap 'docker logs rsshub-smoke; docker rm -f rsshub-smoke' EXIT
                   docker run --detach --name rsshub-smoke --publish 127.0.0.1:1200:1200 "$IMAGE@$DIGEST"
-                  curl --fail --silent --show-error --retry 20 --retry-connrefused --retry-delay 3 http://127.0.0.1:1200/healthz
+                  curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 3 --retry-max-time 90 --connect-timeout 2 --max-time 5 http://127.0.0.1:1200/healthz
                   curl --fail --silent --show-error http://127.0.0.1:1200/ > /dev/null
 
             - name: Export the verified digest
