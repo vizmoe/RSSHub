@@ -11,6 +11,7 @@ import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
 import { fallback, queryToBoolean } from '@/utils/readable-social';
 
+import { getTelegramMessageLink, parseTelegramMessageId } from './message';
 import { renderVideo } from './templates/video';
 import tglibchannel from './tglib/channel';
 
@@ -683,6 +684,8 @@ async function handler(ctx) {
 
                 /* pubDate */
                 const pubDate = parseDate($item.find('.tgme_widget_message_date time').attr('datetime')!);
+                const messageId = parseTelegramMessageId($item.find('.tgme_widget_message').attr('data-post')) ?? parseTelegramMessageId($item.find('.tgme_widget_message_date').attr('href'));
+                const link = messageId ? getTelegramMessageLink(username, messageId) : $item.find('.tgme_widget_message_date').attr('href');
 
                 /* ----- finished parsing ----- */
 
@@ -751,7 +754,8 @@ async function handler(ctx) {
                     title: messageTitle,
                     description,
                     pubDate,
-                    link: $item.find('.tgme_widget_message_date').attr('href'),
+                    link,
+                    guid: link,
                     author: $item.find('.tgme_widget_message_from_author').text(),
 
                     enclosure_url: voiceUrl,

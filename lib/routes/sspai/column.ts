@@ -3,6 +3,8 @@ import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
 
+import { rewriteSspaiImages } from './utils';
+
 export const route: Route = {
     path: '/column/:id',
     categories: ['new-media'],
@@ -64,7 +66,7 @@ async function handler(ctx) {
 
             return cache.tryGet(`sspai: ${item.id}`, async () => {
                 const response = await got(link);
-                const description = response.data.data.body;
+                const description = rewriteSspaiImages(response.data.data.body);
 
                 const single = {
                     title,

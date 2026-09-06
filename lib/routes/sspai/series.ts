@@ -4,6 +4,8 @@ import type { Route } from '@/types';
 import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 
+import { rewriteSspaiImages } from './utils';
+
 export const route: Route = {
     path: '/series',
     categories: ['new-media'],
@@ -57,7 +59,7 @@ async function handler() {
                 const description = banner + data.intro;
                 const $ = load(description);
                 $('img').css('max-width', '100%');
-                item.description = $.html();
+                item.description = rewriteSspaiImages($.html());
                 return item;
             })
         )

@@ -8,6 +8,7 @@ import { getDisplayName } from 'teleproto/Utils.js';
 import type { DataItem } from '@/types';
 import cache from '@/utils/cache';
 
+import { getTelegramMessageLink } from '../message';
 import { getClient, getDocument, getFilename, unwrapMedia } from './client';
 
 export function getGeoLink(geo: Api.GeoPoint) {
@@ -197,11 +198,13 @@ export default async function handler(ctx: Context) {
             }
 
             const title = message.text ? message.text.slice(0, 80) + (message.text.length > 80 ? '...' : '') : new Date(message.date * 1000).toUTCString();
+            const link = getTelegramMessageLink(username!, message.id);
             item.push({
                 title,
                 description,
                 pubDate: new Date(message.date * 1000).toUTCString(),
-                link: `https://t.me/s/${username}/${message.id}`,
+                link,
+                guid: link,
                 author: getDisplayName(message.sender ?? entity),
             });
         }
