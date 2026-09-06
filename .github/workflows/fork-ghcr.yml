@@ -125,6 +125,7 @@ jobs:
               uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
               with:
                   context: .
+                  build-args: PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=0
                   platforms: ${{ matrix.platform }}
                   tags: ${{ env.IMAGE }}
                   labels: |
@@ -143,6 +144,26 @@ jobs:
                   docker run --detach --name rsshub-smoke --publish 127.0.0.1:1200:1200 "$IMAGE@$DIGEST"
                   curl --fail --silent --show-error --retry 20 --retry-all-errors --retry-delay 3 --retry-max-time 90 --connect-timeout 2 --max-time 5 http://127.0.0.1:1200/healthz
                   curl --fail --silent --show-error http://127.0.0.1:1200/ > /dev/null
+                  docker exec --interactive rsshub-smoke node --env-file=.env --input-type=module <<'NODE'
+                  import assert from 'node:assert/strict';
+                  import { chromium } from 'patchright';
+
+                  assert.ok(process.env.CHROMIUM_EXECUTABLE_PATH, 'Bundled Chromium path is missing');
+                  const browser = await chromium.launch({
+                      executablePath: process.env.CHROMIUM_EXECUTABLE_PATH,
+                      headless: true,
+                      args: ['--no-sandbox', '--disable-dev-shm-usage'],
+                      timeout: 30000,
+                  });
+                  try {
+                      const page = await browser.newPage();
+                      await page.goto('data:text/html,<title>RSSHub Chromium</title>');
+                      assert.equal(await page.title(), 'RSSHub Chromium');
+                      console.log(`Chromium ${browser.version()} launched successfully`);
+                  } finally {
+                      await browser.close();
+                  }
+                  NODE
 
             - name: Export the verified digest
               env:
