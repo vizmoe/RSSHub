@@ -1,0 +1,65 @@
+name: Fork - Sync Upstream
+
+on:
+    schedule:
+        - cron: '23 */6 * * *'
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+concurrency:
+    group: fork-sync-upstream
+    cancel-in-progress: false
+
+jobs:
+    sync:
+        if: github.repository == 'vizmoe/RSSHub' && github.ref == 'refs/heads/master'
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        permissions:
+            contents: write
+        outputs:
+            changed: ${{ steps.sync.outputs.changed }}
+            sha: ${{ steps.sync.outputs.sha }}
+        steps:
+            - name: Merge upstream master while preserving fork commits
+              id: sync
+              uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+              with:
+                  script: |
+                      const { owner, repo } = context.repo;
+                      const branch = 'master';
+                      const before = await github.rest.repos.getBranch({ owner, repo, branch });
+                      let result;
+                      try {
+                          result = await github.rest.repos.mergeUpstream({ owner, repo, branch });
+                      } catch (error) {
+                          if (error.status === 409) {
+                              core.setFailed('Upstream changes conflict with fork commits. Resolve the conflict with DIYgod/RSSHub master, then rerun this workflow. No force synchronization was attempted.');
+                              return;
+                          }
+                          throw error;
+                      }
+                      const after = await github.rest.repos.getBranch({ owner, repo, branch });
+                      const changed = before.data.commit.sha !== after.data.commit.sha;
+                      core.setOutput('changed', String(changed));
+                      core.setOutput('sha', after.data.commit.sha);
+                      await core.summary
+                          .addHeading('Upstream synchronization')
+                          .addRaw(changed ? 'Merged upstream updates into master.' : 'master already contains the upstream updates.')
+                          .addBreak()
+                          .addCodeBlock(after.data.commit.sha)
+                          .write();
+                      core.info(result.data.message);
+
+    # GITHUB_TOKEN updates do not trigger push workflows, so call the publisher directly.
+    publish:
+        needs: sync
+        if: needs.sync.outputs.changed == 'true'
+        permissions:
+            contents: read
+            packages: write
+        uses: ./.github/workflows/fork-ghcr.yml
+        with:
+            ref: ${{ needs.sync.outputs.sha }}
