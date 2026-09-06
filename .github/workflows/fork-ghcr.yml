@@ -2,7 +2,7 @@ name: Fork - Publish GHCR
 
 on:
     push:
-        branches: [codex/shaonan-fulltext]
+        branches: [main]
     workflow_dispatch:
     workflow_call:
         inputs:
@@ -20,7 +20,7 @@ concurrency:
 
 env:
     IMAGE: ghcr.io/vizmoe/rsshub
-    CUSTOM_BRANCH: codex/shaonan-fulltext
+    CUSTOM_BRANCH: main
 
 jobs:
     prepare:

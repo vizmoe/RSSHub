@@ -23,36 +23,19 @@ jobs:
             changed: ${{ steps.sync.outputs.changed }}
             sha: ${{ steps.sync.outputs.sha }}
         steps:
-            - name: Sync master and merge it into the custom branch
+            - name: Sync the default branch with DIYgod/RSSHub master
               id: sync
               uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
               with:
                   script: |
                       const { owner, repo } = context.repo;
-                      const upstreamBranch = 'master';
-                      const customBranch = 'codex/shaonan-fulltext';
-                      try {
-                          await github.rest.repos.mergeUpstream({ owner, repo, branch: upstreamBranch });
-                      } catch (error) {
-                          if (error.status === 409) {
-                              core.setFailed('master conflicts with DIYgod/RSSHub master. Resolve this conflict and rerun the workflow. No force synchronization was attempted.');
-                              return;
-                          }
-                          throw error;
-                      }
-                      const upstream = await github.rest.repos.getBranch({ owner, repo, branch: upstreamBranch });
+                      const customBranch = context.payload.repository.default_branch;
                       const before = await github.rest.repos.getBranch({ owner, repo, branch: customBranch });
                       try {
-                          await github.rest.repos.merge({
-                              owner,
-                              repo,
-                              base: customBranch,
-                              head: upstream.data.commit.sha,
-                              commit_message: `Merge upstream master into ${customBranch}`,
-                          });
+                          await github.rest.repos.mergeUpstream({ owner, repo, branch: customBranch });
                       } catch (error) {
                           if (error.status === 409) {
-                              core.setFailed(`master is synchronized, but upstream changes conflict with ${customBranch}. Merge master into ${customBranch}, resolve the conflicts, and rerun this workflow. The custom branch was not overwritten.`);
+                              core.setFailed(`${customBranch} conflicts with DIYgod/RSSHub master. Resolve this conflict and rerun the workflow. No force synchronization was attempted.`);
                               return;
                           }
                           throw error;
@@ -63,7 +46,7 @@ jobs:
                       core.setOutput('sha', after.data.commit.sha);
                       await core.summary
                           .addHeading('Upstream synchronization')
-                          .addRaw(`master is synchronized with DIYgod/RSSHub. ${changed ? `Merged updates into ${customBranch}.` : `${customBranch} already contains these updates.`}`)
+                          .addRaw(changed ? `Merged DIYgod/RSSHub master into ${customBranch}.` : `${customBranch} already contains the latest upstream master.`)
                           .addBreak()
                           .addCodeBlock(after.data.commit.sha)
                           .write();
@@ -75,6 +58,6 @@ jobs:
         permissions:
             contents: read
             packages: write
-        uses: vizmoe/RSSHub/.github/workflows/fork-ghcr.yml@codex/shaonan-fulltext
+        uses: vizmoe/RSSHub/.github/workflows/fork-ghcr.yml@main
         with:
             ref: ${{ needs.sync.outputs.sha }}
