@@ -3,19 +3,6 @@ name: Fork - Publish GHCR
 on:
     push:
         branches: [codex/shaonan-fulltext]
-        paths:
-            - '.github/workflows/fork-ghcr.yml'
-            - 'Dockerfile'
-            - '.dockerignore'
-            - 'lib/**'
-            - 'scripts/**'
-            - 'patches/**'
-            - 'assets/**'
-            - 'package.json'
-            - 'pnpm-lock.yaml'
-            - 'tsconfig.json'
-            - 'tsdown*.ts'
-            - 'vitest*.ts'
     workflow_dispatch:
     workflow_call:
         inputs:
