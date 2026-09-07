@@ -86,6 +86,7 @@ jobs:
                   lib/utils/cache/index.test.ts
                   lib/registry.test.ts
                   lib/config.test.ts
+                  tests/telegram-message.test.ts
 
     build:
         needs: [prepare, verify]

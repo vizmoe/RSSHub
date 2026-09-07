@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { getTelegramMessageLink, parseTelegramMessageId } from './message';
+import { getTelegramMessageLink, parseTelegramMessageId } from '../lib/routes/telegram/message';
 
 describe('telegram message link', () => {
     it('builds a canonical message URL', () => {
