@@ -29,7 +29,15 @@ binding = "BROWSER"
 [[kv_namespaces]]
 binding = "CACHE"
 
+# PLAYWRIGHT_WS_ENDPOINT takes priority over BROWSER; use a matching Playwright version.
+# Optional service binding when the WebSocket server is another Worker on this account.
+# [[services]]
+# binding = "PLAYWRIGHT_SERVICE"
+# service = "your-playwright-service"
+
 [vars]
+# Only use the service binding for this endpoint origin.
+# PLAYWRIGHT_SERVICE_ORIGIN = "https://your-playwright-service.example.com"
 # Environment variables can be set here or via wrangler secret
 # DEBUG_INFO = "false"
 
