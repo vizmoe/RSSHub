@@ -17,16 +17,24 @@ jobs:
         if: github.repository == 'vizmoe/RSSHub' && github.ref_name == github.event.repository.default_branch
         runs-on: ubuntu-latest
         timeout-minutes: 10
-        permissions:
-            contents: write
         outputs:
             changed: ${{ steps.sync.outputs.changed }}
             sha: ${{ steps.sync.outputs.sha }}
         steps:
+            - name: Check the upstream sync token
+              env:
+                  UPSTREAM_SYNC_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
+              run: |
+                  if [[ -z "$UPSTREAM_SYNC_TOKEN" ]]; then
+                      echo "::error::Set the UPSTREAM_SYNC_TOKEN repository secret to a fine-grained personal access token scoped to vizmoe/RSSHub with Contents and Workflows write permissions."
+                      exit 1
+                  fi
+
             - name: Sync the default branch with DIYgod/RSSHub master
               id: sync
               uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
               with:
+                  github-token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
                   script: |
                       const { owner, repo } = context.repo;
                       const customBranch = context.payload.repository.default_branch;
@@ -34,6 +42,10 @@ jobs:
                       try {
                           await github.rest.repos.mergeUpstream({ owner, repo, branch: customBranch });
                       } catch (error) {
+                          if (error.status === 422 && error.message.includes('without `workflows` permission')) {
+                              core.setFailed('UPSTREAM_SYNC_TOKEN cannot update workflow files. Grant its fine-grained personal access token Contents and Workflows write permissions for vizmoe/RSSHub, then rerun this workflow.');
+                              return;
+                          }
                           if (error.status === 409) {
                               core.setFailed(`${customBranch} conflicts with DIYgod/RSSHub master. Resolve this conflict and rerun the workflow. No force synchronization was attempted.`);
                               return;
@@ -51,10 +63,10 @@ jobs:
                           .addCodeBlock(after.data.commit.sha)
                           .write();
 
-    # GITHUB_TOKEN updates do not trigger push workflows, so call the publisher directly.
+    # Token-authenticated syncs trigger fork-ghcr.yml on push. Publish here only for manual runs without changes.
     publish:
         needs: sync
-        if: needs.sync.outputs.changed == 'true' || github.event_name == 'workflow_dispatch'
+        if: needs.sync.outputs.changed == 'false' && github.event_name == 'workflow_dispatch'
         permissions:
             contents: read
             packages: write
