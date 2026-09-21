@@ -26,6 +26,7 @@ export const route: Route = {
         },
     ],
     name: '首页',
+    description: '少数派 CDN 图片通过当前 RSSHub 实例转发，以兼容不发送 Referer 的阅读器。启用访问控制时，图片链接使用仅授权该图片的访问码；自定义图片防盗链模板优先。',
     maintainers: ['HenryQW', 'cscnk52'],
     handler,
     url: 'sspai.com/index',
