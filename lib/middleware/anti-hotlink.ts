@@ -5,6 +5,7 @@ import type { MiddlewareHandler } from 'hono';
 import { config } from '@/config';
 import type { Data } from '@/types';
 import logger from '@/utils/logger';
+import { proxySspaiImages } from '@/utils/sspai-images';
 
 const templateRegex = /\$\{([^{}]+)\}/g;
 const urlProperties = ['hash', 'host', 'hostname', 'href', 'origin', 'password', 'pathname', 'port', 'protocol', 'search', 'searchParams', 'username'] as const;
@@ -125,6 +126,33 @@ const middleware: MiddlewareHandler = async (ctx, next) => {
         multimediaHotlinkTemplate = filterPath(ctx.req.path) ? config.hotlink.template : undefined;
     }
 
+    const data: Data = ctx.get('data');
+    if (!imageHotlinkTemplate && !config.hotlink.template && ctx.req.path.startsWith('/sspai/') && data?.item) {
+        let instanceUrl = new URL(ctx.req.url);
+        // The public origin affects feed contents, including when no forwarding headers were sent.
+        ctx.header('Vary', 'X-Forwarded-Host, X-Forwarded-Proto', { append: true });
+        const forwardedProtocol = ctx.req.header('x-forwarded-proto')?.split(',').at(-1)?.trim();
+        if (forwardedProtocol === 'http' || forwardedProtocol === 'https') {
+            instanceUrl.protocol = `${forwardedProtocol}:`;
+        }
+        const forwardedHost = ctx.req.header('x-forwarded-host')?.split(',').at(-1)?.trim();
+        if (forwardedHost) {
+            try {
+                const forwardedUrl = new URL(`${instanceUrl.protocol}//${forwardedHost}`);
+                if (!forwardedUrl.username && !forwardedUrl.password) {
+                    instanceUrl = forwardedUrl;
+                }
+            } catch {
+                // Fall back to the request origin for malformed proxy headers.
+            }
+        }
+        for (const item of data.item) {
+            if (item.description) {
+                item.description = proxySspaiImages(item.description, instanceUrl);
+            }
+        }
+    }
+
     if (!imageHotlinkTemplate && !multimediaHotlinkTemplate) {
         return;
     }
@@ -136,7 +164,6 @@ const middleware: MiddlewareHandler = async (ctx, next) => {
     // and here we will only check them in description.
     // Use Cheerio to load the description as html and filter all
     // image link
-    const data: Data = ctx.get('data');
     if (data) {
         if (data.image) {
             data.image = replaceUrl(imageHotlinkTemplate, data.image);

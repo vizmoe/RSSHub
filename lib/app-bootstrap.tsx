@@ -4,6 +4,7 @@ import { jsxRenderer } from 'hono/jsx-renderer';
 import { trimTrailingSlash } from 'hono/trailing-slash';
 
 import api from '@/api';
+import { sspaiImageHandler } from '@/api/sspai-image';
 import { errorHandler, notFoundHandler } from '@/errors';
 import accessControl from '@/middleware/access-control';
 import antiHotlink from '@/middleware/anti-hotlink';
@@ -39,6 +40,7 @@ app.use(trace);
 app.use(honeybadger);
 app.use(sentry);
 app.use(accessControl);
+app.get('/api/sspai/image/:source', sspaiImageHandler);
 app.use(debug);
 app.use(template);
 app.use(header);

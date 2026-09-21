@@ -1,6 +1,6 @@
 import { load } from 'cheerio';
 
-/** Strip Qiniu imageView2 and allow a document origin referrer. cdnfile.sspai.com 403s with no Referer. */
+/** Normalize lazy images before caching; middleware handles image delivery and referrer policy. */
 export function rewriteSspaiImages(html: string | undefined): string {
     if (!html) {
         return '';
@@ -26,7 +26,6 @@ export function rewriteSspaiImages(html: string | undefined): string {
 
         $el.removeAttr('data-original');
         $el.removeAttr('data-src');
-        $el.attr('referrerpolicy', 'origin');
     });
 
     return $.html();
