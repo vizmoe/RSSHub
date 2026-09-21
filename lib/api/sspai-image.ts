@@ -40,8 +40,9 @@ export const sspaiImageHandler: Handler = async (ctx) => {
         let length = 0;
         try {
             while (true) {
-                // eslint-disable-next-line no-await-in-loop
-                const { done, value } = await reader.read();
+                // Read serially so the byte limit also bounds buffered image data.
+                // oxlint-disable-next-line no-await-in-loop
+                const { done, value } = await reader.read(); // eslint-disable-line no-await-in-loop
                 if (done) {
                     break;
                 }
