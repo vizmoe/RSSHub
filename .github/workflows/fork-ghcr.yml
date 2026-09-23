@@ -88,6 +88,7 @@ jobs:
                   lib/config.test.ts
                   tests/telegram-message.test.ts
                   tests/sspai-images.test.ts
+                  tests/tsdm39-forum.test.ts
 
     build:
         needs: [prepare, verify]
