@@ -160,10 +160,6 @@ export default async function handler(ctx: Context) {
     for (const message of messages) {
         let text = message.text; // must not be HTML
 
-        if (message.fwdFrom?.fromId) {
-            const fwdFrom = await client.getEntity(message.fwdFrom.fromId);
-            text = `Forwarded From: ${getDisplayName(fwdFrom)}: ${text}`;
-        }
         const media = await unwrapMedia(message.media, message.peerId);
         if (message.media instanceof Api.MessageMediaStory && media) {
             // if successfully loaded the story
@@ -189,7 +185,8 @@ export default async function handler(ctx: Context) {
                 }
             }
         }
-        if (text !== '' || ++i === messages.length - 1) {
+        // Forwarded media remains its own item without resolving the original channel.
+        if (text !== '' || message.fwdFrom?.fromId || ++i === messages.length - 1) {
             let description = attachments.join('<br/>\n');
             attachments = []; // emitting these, buffer other ones
 
