@@ -87,6 +87,7 @@ jobs:
                   lib/registry.test.ts
                   lib/config.test.ts
                   tests/telegram-message.test.ts
+                  tests/telegram-channel.test.ts
                   tests/sspai-images.test.ts
 
     build:

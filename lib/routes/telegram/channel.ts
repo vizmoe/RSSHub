@@ -148,7 +148,9 @@ For backward compatibility reasons, invalid \`routeParams\` will be treated as \
     handler,
     description: `::: tip
 Due to Telegram restrictions, some channels involving pornography, copyright, and politics cannot be subscribed. You can confirm by visiting \`https://t.me/s/:username\`, it's recommended to deploy your own instance with telegram api configs (create your telegram application via \`https://core.telegram.org/api/obtaining_api_id\`, run this command \`node ./lib/routes/telegram/scripts/get-telegram-session.mjs\` to get \`TELEGRAM_SESSION\` and set it as Environment Variable).
-:::`,
+:::
+
+In API mode, forwarded messages readable in the subscribed channel do not require access to their original channels.`,
 };
 
 async function handler(ctx) {
