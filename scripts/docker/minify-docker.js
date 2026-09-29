@@ -1,5 +1,5 @@
-/* eslint-disable no-console */
 import path from 'node:path';
+import { format } from 'node:util';
 
 import { nodeFileTrace } from '@vercel/nft';
 import fs from 'fs-extra';
@@ -11,12 +11,12 @@ const projectRoot = path.resolve(process.env.PROJECT_ROOT || path.join(__dirname
 const resultFolder = path.join(projectRoot, 'app-minimal'); // no need to resolve, ProjectRoot is always absolute
 const files = ['dist/index.mjs', 'node_modules/cross-env/dist/bin/cross-env.js', 'node_modules/.bin/cross-env'].map((file) => path.join(projectRoot, file));
 
-console.log('Start analyzing, project root:', projectRoot);
+process.stdout.write(`Start analyzing, project root: ${projectRoot}\n`);
 const { fileList: fileSet } = await nodeFileTrace(files, {
     base: projectRoot,
 });
 let fileList = [...fileSet];
-console.log('Total touchable files:', fileList.length);
+process.stdout.write(`Total touchable files: ${fileList.length}\n`);
 fileList = fileList.filter((file) => file.startsWith('node_modules/')); // only need node_modules
 
 // playwright-core uses path.join to load browsers.json in v1.60+ instead of ../.., which prevents @vercel/nft from tracing it.
@@ -29,15 +29,27 @@ if (patchrightCoreFile) {
     const browsersJson = `${packageRoot}/browsers.json`;
     if (!fileList.includes(browsersJson) && (await fs.pathExists(path.join(projectRoot, browsersJson)))) {
         fileList.push(browsersJson);
-        console.log('Manually included patchright-core asset:', browsersJson);
+        process.stdout.write(`Manually included patchright-core asset: ${browsersJson}\n`);
     }
 }
-console.log('Total files need to be copied (touchable files in node_modules/):', fileList.length);
-console.log('Start copying files, destination:', resultFolder);
+// oxc-parser loads its raw-transfer deserializers with a template-literal require through createRequire(import.meta.url),
+// which @vercel/nft does not expand.
+// https://github.com/oxc-project/oxc/blob/crates_v0.151.0/napi/parser/src-js/raw-transfer/eager.js#L75-L77
+const oxcEagerFile = fileList.find((file) => file.endsWith('/oxc-parser/src-js/raw-transfer/eager.js'));
+if (oxcEagerFile) {
+    const deserializeDir = oxcEagerFile.replace(/raw-transfer\/eager\.js$/, 'generated/deserialize');
+    if (await fs.pathExists(path.join(projectRoot, deserializeDir))) {
+        fileList.push(deserializeDir);
+        process.stdout.write(`Manually included oxc-parser asset: ${deserializeDir}\n`);
+    }
+}
+
+process.stdout.write(`Total files need to be copied (touchable files in node_modules/): ${fileList.length}\n`);
+process.stdout.write(`Start copying files, destination: ${resultFolder}\n`);
 try {
     await Promise.all(fileList.map((e) => fs.copy(path.join(projectRoot, e), path.join(resultFolder, e))));
 } catch (error) {
     // fix unhandled promise rejections
-    console.error(error, error.stack);
+    process.stderr.write(`${format(error, error.stack)}\n`);
     process.exit(1);
 }
