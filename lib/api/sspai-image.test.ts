@@ -2,14 +2,14 @@ import { load } from 'cheerio';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import app from '../lib/app';
-import { config } from '../lib/config';
-import server from '../lib/setup.test';
-import cache from '../lib/utils/cache';
-import md5 from '../lib/utils/md5';
-import ofetch from '../lib/utils/ofetch';
+import app from '@/app';
+import { config } from '@/config';
+import server from '@/setup.test';
+import cache from '@/utils/cache';
+import md5 from '@/utils/md5';
+import ofetch from '@/utils/ofetch';
 
-vi.mock('../lib/utils/request-rewriter', () => ({}));
+vi.mock('@/utils/request-rewriter', () => ({}));
 
 const source = 'https://cdnfile.sspai.com/2026/09/12/32887265aa63018a36fa7df7238c8481.jpg';
 const testKey = 'test-only-access-key';

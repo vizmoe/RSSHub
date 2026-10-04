@@ -71,6 +71,7 @@ jobs:
               run: pnpm build:routes
             - name: Typecheck
               run: pnpm typecheck
+            # The route registry requires tests to be colocated with their source modules.
             - name: Test fork integrations and feed infrastructure
               env:
                   REDIS_URL: redis://localhost:${{ job.services.redis.ports['6379'] }}/
@@ -80,14 +81,13 @@ jobs:
                   lib/utils/bilibili-opus.test.ts
                   lib/utils/substack.test.ts
                   lib/utils/readable-social.test.ts
-                  lib/utils/xai-news.test.ts
                   lib/utils/rss-parser.test.ts
                   lib/utils/parse-date.test.ts
                   lib/utils/cache/index.test.ts
                   lib/registry.test.ts
                   lib/config.test.ts
-                  tests/telegram-message.test.ts
-                  tests/sspai-images.test.ts
+                  lib/utils/telegram-message.test.ts
+                  lib/api/sspai-image.test.ts
 
     build:
         needs: [prepare, verify]

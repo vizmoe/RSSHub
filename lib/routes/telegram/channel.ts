@@ -10,8 +10,8 @@ import cache from '@/utils/cache';
 import ofetch from '@/utils/ofetch';
 import { parseDate } from '@/utils/parse-date';
 import { fallback, queryToBoolean } from '@/utils/readable-social';
+import { getTelegramMessageLink, parseTelegramMessageId } from '@/utils/telegram-message';
 
-import { getTelegramMessageLink, parseTelegramMessageId } from './message';
 import { renderVideo } from './templates/video';
 import tglibchannel from './tglib/channel';
 
