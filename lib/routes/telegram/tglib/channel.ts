@@ -7,8 +7,8 @@ import { getDisplayName } from 'teleproto/Utils.js';
 
 import type { DataItem } from '@/types';
 import cache from '@/utils/cache';
+import { getTelegramMessageLink } from '@/utils/telegram-message';
 
-import { getTelegramMessageLink } from '../message';
 import { getClient, getDocument, getFilename, unwrapMedia } from './client';
 
 export function getGeoLink(geo: Api.GeoPoint) {

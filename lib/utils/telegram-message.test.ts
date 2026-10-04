@@ -3,15 +3,15 @@ import { Api } from 'teleproto';
 import { returnBigInt } from 'teleproto/Helpers.js';
 import { describe, expect, it, vi } from 'vitest';
 
-import { getTelegramMessageLink, parseTelegramMessageId } from '../lib/routes/telegram/message';
-import handler from '../lib/routes/telegram/tglib/channel';
-import { getClient } from '../lib/routes/telegram/tglib/client';
+import handler from '@/routes/telegram/tglib/channel';
+import { getClient } from '@/routes/telegram/tglib/client';
+import { getTelegramMessageLink, parseTelegramMessageId } from '@/utils/telegram-message';
 
-vi.mock(import('../lib/routes/telegram/tglib/client'), async (importOriginal) => ({
+vi.mock(import('@/routes/telegram/tglib/client'), async (importOriginal) => ({
     ...(await importOriginal()),
     getClient: vi.fn(),
 }));
-vi.mock('../lib/utils/cache', () => ({ default: { get: vi.fn(), set: vi.fn() } }));
+vi.mock('@/utils/cache', () => ({ default: { get: vi.fn(), set: vi.fn() } }));
 
 describe('telegram message link', () => {
     it('builds a canonical message URL', () => {
