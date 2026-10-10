@@ -1,7 +1,7 @@
 import type { Namespace } from '@/types';
 
 export const namespace: Namespace = {
-    name: 'Arena',
+    name: 'Arena (formerly LMSYS Chatbot Arena)',
     url: 'arena.ai',
     lang: 'en',
 };
