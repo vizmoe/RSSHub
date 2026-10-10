@@ -10,6 +10,8 @@ import { parseDate } from '@/utils/parse-date';
 const baseUrl = 'https://cn.club.vmall.com';
 const apiUrl = 'https://sgw-cn.c.huawei.com/forward/club/content_h5';
 
+type CommunityRequestBody = { site: string; userId: string; pageSize: number; curPage: number } | { threadId: string; pageIndex: number; pageSize: number; orderBy: number };
+
 export const route: Route = {
     path: '/community/user/:uid?',
     example: '/huawei/community/user/1000014645695',
@@ -22,7 +24,7 @@ export const route: Route = {
     handler,
 };
 
-async function requestApi(path: string, body: object, appId: string) {
+async function requestApi(path: string, body: CommunityRequestBody, appId: string) {
     const response = await ofetch(`${apiUrl}/${path}`, {
         method: 'POST',
         headers: { 'SGW-APP-ID': appId, Origin: baseUrl, Referer: `${baseUrl}/` },

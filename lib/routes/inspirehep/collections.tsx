@@ -38,7 +38,7 @@ interface CollectionRecord {
     };
 }
 
-const collectionNames: Record<string, string> = {
+const collectionNames = {
     jobs: 'Jobs',
     seminars: 'Seminars',
     conferences: 'Conferences',

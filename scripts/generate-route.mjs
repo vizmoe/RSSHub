@@ -99,6 +99,16 @@ export async function generateRoute(options, fetcher = fetch) {
     return routeFile;
 }
 
+async function promptFields(prompts, values, index = 0) {
+    const field = fields[index];
+    if (!field) {
+        return;
+    }
+    // Ask one field at a time because all prompts share a terminal input stream.
+    values[field] ||= await prompts.question(`${field}${field === 'template' ? ' (api/html/browser)' : ''}: `);
+    await promptFields(prompts, values, index + 1);
+}
+
 async function main() {
     const { values } = parseArgs({ options: Object.fromEntries([...[...fields, 'directory', 'path', 'example'].map((field) => [field, { type: 'string' }]), ['help', { type: 'boolean' }]]) });
     if (values.help) {
@@ -110,11 +120,7 @@ async function main() {
     if (process.stdin.isTTY && fields.some((field) => !Object.hasOwn(values, field))) {
         const prompts = createInterface({ input: process.stdin, output: process.stdout });
         try {
-            for (const field of fields) {
-                // Prompts must be sequential because they share a terminal input stream.
-                // eslint-disable-next-line no-await-in-loop
-                values[field] ||= await prompts.question(`${field}${field === 'template' ? ' (api/html/browser)' : ''}: `);
-            }
+            await promptFields(prompts, values);
         } finally {
             prompts.close();
         }

@@ -4,7 +4,7 @@ import type { DataItem } from '@/types';
 
 type Attachment = NonNullable<DataItem['attachments']>[number];
 
-const mimeTypes: Record<string, string> = {
+const mimeTypes = {
     avif: 'image/avif',
     gif: 'image/gif',
     jpeg: 'image/jpeg',
