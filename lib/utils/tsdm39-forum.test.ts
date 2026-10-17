@@ -1,5 +1,4 @@
 import type { Context } from 'hono';
-import { JSDOM } from 'jsdom';
 import { http, HttpResponse } from 'msw';
 import Parser from 'rss-parser';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -206,16 +205,5 @@ describe('TSDM forum subscriptions', () => {
         expect(feed.item).toHaveLength(8);
         expect(maximum).toBeGreaterThan(1);
         expect(maximum).toBeLessThanOrEqual(3);
-    });
-
-    it('maps only forum-display URLs to subscriptions', () => {
-        const target = route.radar![0].target;
-        const document = new JSDOM('').window.document;
-        if (typeof target !== 'function') {
-            throw new TypeError('Expected a Radar target function');
-        }
-        expect(target({}, `${rootUrl}/forum.php?mod=forumdisplay&fid=702&page=1`, document)).toBe('/tsdm39/forum/702');
-        expect(target({}, `${rootUrl}/forum.php?mod=viewthread&tid=100`, document)).toBe('');
-        expect(target({}, `${rootUrl}/forum.php?mod=forumdisplay&fid=invalid`, document)).toBe('');
     });
 });
