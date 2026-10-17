@@ -8,7 +8,7 @@ const pixivRetryPaths = new Set(['/v1/illust/ranking', '/v1/user/illusts', '/v1/
 const responseHeadersToRemove = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization', 'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-encoding', 'content-length']);
 
 type PlaywrightPage = Awaited<ReturnType<typeof getPlaywrightPage>>;
-type PausedRequest = {
+export type PausedRequest = {
     requestId: string;
     request: { url: string };
     frameId: string;
@@ -32,7 +32,7 @@ async function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T
     }
 }
 
-async function discardBody(body: { cancel(): Promise<unknown> }) {
+async function discardBody(body: { cancel(): Promise<void> }) {
     try {
         await body.cancel();
     } catch {
@@ -76,7 +76,7 @@ async function readSmallForm(request: Request, signal: AbortSignal): Promise<Uin
         }
         while (true) {
             // Read serially so the size limit also bounds buffered form data.
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             const { done, value } = await abortable(reader.read(), signal);
             if (done) {
                 break;

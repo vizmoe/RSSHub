@@ -133,7 +133,6 @@ export default async function outPlaywright() {
 
 // No-op in Node.js environment (used by Worker build via alias)
 export const setBrowserBinding = (_binding: any) => {};
-export const setPlaywrightServiceBinding = (_binding?: unknown, _origin?: string) => {};
 
 /**
  * @returns Playwright page
@@ -150,8 +149,8 @@ export const getPlaywrightPage = async (
         onBeforeLoad?: (page: Page, context?: BrowserContext) => Promise<void> | void;
     } = {}
 ) => {
-    if (instanceOptions.useConfiguredEndpoint && !config.playwrightWSEndpoint) {
-        throw new Error('Configure PLAYWRIGHT_WS_ENDPOINT to use the remote Playwright browser.');
+    if (instanceOptions.useConfiguredEndpoint && !config.playwrightWSEndpoint && !config.playwrightCDPEndpoint) {
+        throw new Error('Configure PLAYWRIGHT_WS_ENDPOINT or PLAYWRIGHT_CDP_ENDPOINT to use the remote Playwright browser.');
     }
     let allowProxy = false;
     const proxyRegex = new RegExp(proxy.proxyObj.url_regex);
