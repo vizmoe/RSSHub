@@ -28,7 +28,7 @@ interface Generalspec {
     render_spec: Renderspec;
     size_spec: Containersize;
 }
-/* oxlint-disable-next-line typescript/no-empty-object-type */
+/* eslint-disable-next-line @typescript-eslint/no-empty-object-type */
 interface AVATARLAYER {}
 interface Webcssstyle {
     borderRadius: string;

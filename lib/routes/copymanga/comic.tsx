@@ -47,7 +47,7 @@ async function handler(ctx) {
 
             do {
                 bHasNextPage = false;
-                // oxlint-disable-next-line no-await-in-loop
+                // eslint-disable-next-line no-await-in-loop
                 const { code, results } = await ofetch(strBaseUrl, {
                     headers: {
                         platform: '',

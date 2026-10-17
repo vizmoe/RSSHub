@@ -76,7 +76,7 @@ async function readSmallForm(request: Request, signal: AbortSignal): Promise<Uin
         }
         while (true) {
             // Read serially so the size limit also bounds buffered form data.
-            // oxlint-disable-next-line no-await-in-loop
+            // eslint-disable-next-line no-await-in-loop
             const { done, value } = await abortable(reader.read(), signal);
             if (done) {
                 break;
