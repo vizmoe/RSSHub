@@ -105,6 +105,7 @@ type ConfigEnvKeys =
     | 'BUKENAVI_EMAIL'
     | 'BUKENAVI_PASSWORD'
     | 'CAIXIN_COOKIE'
+    | 'CARA_COOKIE'
     | 'CIVITAI_COOKIE'
     | 'COOMER_ASSETS_URL'
     | 'COOMER_ROOT_URL'
@@ -218,6 +219,7 @@ type ConfigEnvKeys =
     | 'SPOTIFY_REFRESHTOKEN'
     | 'SSPAI_BEARERTOKEN'
     | 'SUBSTACK_COOKIE'
+    | 'TAOGUBA_COOKIE'
     | 'TELEGRAM_TOKEN'
     | 'TELEGRAM_SESSION'
     | 'TELEGRAM_API_ID'
@@ -409,6 +411,9 @@ export type Config = {
         portal_cookie?: string;
     };
     caixin: {
+        cookie?: string;
+    };
+    cara: {
         cookie?: string;
     };
     civitai: {
@@ -672,6 +677,9 @@ export type Config = {
         bearertoken?: string;
     };
     substack: {
+        cookie?: string;
+    };
+    taoguba: {
         cookie?: string;
     };
     telegram: {
@@ -962,6 +970,9 @@ const calculateValue = () => {
         caixin: {
             cookie: envs.CAIXIN_COOKIE,
         },
+        cara: {
+            cookie: envs.CARA_COOKIE,
+        },
         civitai: {
             cookie: envs.CIVITAI_COOKIE,
         },
@@ -1224,6 +1235,9 @@ const calculateValue = () => {
         },
         substack: {
             cookie: envs.SUBSTACK_COOKIE,
+        },
+        taoguba: {
+            cookie: envs.TAOGUBA_COOKIE,
         },
         telegram: {
             token: envs.TELEGRAM_TOKEN,

@@ -54,7 +54,7 @@ const exec = async (func) => {
     for (let i = 0; i < count; i++) {
         index++;
         try {
-            // eslint-disable-next-line no-await-in-loop
+            // oxlint-disable-next-line no-await-in-loop
             result = await func(youtube[index % count]);
             break;
         } catch (error) {

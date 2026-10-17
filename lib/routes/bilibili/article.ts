@@ -6,6 +6,7 @@ import { parseBilibiliOpusArticle } from '@/utils/bilibili-opus';
 import cacheGeneral from '@/utils/cache';
 import got from '@/utils/got';
 import { parseDate } from '@/utils/parse-date';
+import timezone from '@/utils/timezone';
 
 import cache from './cache';
 
@@ -118,7 +119,7 @@ async function handler(ctx) {
 
             return {
                 ...feedItem,
-                pubDate: feedItem.pubDate ? parseDate(feedItem.pubDate, typeof feedItem.pubDate === 'number' ? 'X' : 'YYYY年MM月DD日 HH:mm') : undefined,
+                pubDate: feedItem.pubDate ? (typeof feedItem.pubDate === 'number' ? parseDate(feedItem.pubDate, 'X') : timezone(parseDate(feedItem.pubDate, 'YYYY年MM月DD日 HH:mm'), 8)) : undefined,
             };
         })
     );
