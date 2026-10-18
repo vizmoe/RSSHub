@@ -156,6 +156,8 @@ Due to Telegram restrictions, some channels involving pornography, copyright, an
 MTProto connections can use a SOCKS4/5 \`PROXY_URI\` (for example, \`socks5://127.0.0.1:1080\`) or the dedicated \`TELEGRAM_PROXY_HOST\`, \`TELEGRAM_PROXY_PORT\`, and \`TELEGRAM_PROXY_SECRET\` MTProxy settings, which take precedence. HTTP proxies only apply to the public web feed; use a SOCKS or MTProxy endpoint for authenticated MTProto feeds.
 
 When a reverse proxy removes a public URL prefix (for example, \`/rss\`), set its \`X-Forwarded-Prefix\` request header to that prefix so Telegram media links include it. Access-control \`key\` and \`code\` parameters are preserved in these media links.
+
+In API mode, forwarded messages readable in the subscribed channel do not require access to their original channels.
 :::`,
 };
 
