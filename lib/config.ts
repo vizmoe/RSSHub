@@ -91,6 +91,8 @@ type ConfigEnvKeys =
     // Route-specific (dynamic cookies with prefixes)
     | 'BAIDU_COOKIE'
     | `BILIBILI_COOKIE_${string}`
+    | `BILIBILI_USERNAME_${string}`
+    | `BILIBILI_PASSWORD_${string}`
     | 'BILIBILI_USERNAME'
     | 'BILIBILI_PASSWORD'
     | 'BILIBILI_DM_IMG_LIST'
@@ -401,6 +403,8 @@ export type Config = {
     };
     bilibili: {
         cookies: Record<string, string | undefined>;
+        usernames: Record<string, string | undefined>;
+        passwords: Record<string, string | undefined>;
         username?: string;
         password?: string;
         dmImgList?: string;
@@ -834,6 +838,8 @@ const getAssetsUrl = (rootUrl: string, assetsUrl?: string) => {
 
 const calculateValue = () => {
     const bilibili_cookies: Record<string, string | undefined> = {};
+    const bilibili_usernames: Record<string, string | undefined> = {};
+    const bilibili_passwords: Record<string, string | undefined> = {};
     const email_config: Record<string, string | undefined> = {};
     const discuz_cookies: Record<string, string | undefined> = {};
     const medium_cookies: Record<string, string | undefined> = {};
@@ -843,6 +849,12 @@ const calculateValue = () => {
         if (name.startsWith('BILIBILI_COOKIE_')) {
             const uid = name.slice(16);
             bilibili_cookies[uid] = envs[name];
+        } else if (name.startsWith('BILIBILI_USERNAME_')) {
+            const uid = name.slice('BILIBILI_USERNAME_'.length);
+            bilibili_usernames[uid] = envs[name];
+        } else if (name.startsWith('BILIBILI_PASSWORD_')) {
+            const uid = name.slice('BILIBILI_PASSWORD_'.length);
+            bilibili_passwords[uid] = envs[name];
         } else if (name.startsWith('EMAIL_CONFIG_')) {
             const id = name.slice(13);
             email_config[id] = envs[name];
@@ -971,6 +983,8 @@ const calculateValue = () => {
         },
         bilibili: {
             cookies: bilibili_cookies,
+            usernames: bilibili_usernames,
+            passwords: bilibili_passwords,
             username: envs.BILIBILI_USERNAME,
             password: envs.BILIBILI_PASSWORD,
             dmImgList: envs.BILIBILI_DM_IMG_LIST,
