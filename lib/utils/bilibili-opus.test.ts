@@ -1,6 +1,16 @@
-import { describe, expect, it } from 'vitest';
+import { constants, generateKeyPairSync, privateDecrypt } from 'node:crypto';
 
-import { extractBilibiliOpusImages, extractBilibiliOpusImagesFromHtml, parseBilibiliOpusArticle, renderBilibiliImages } from './bilibili-opus';
+import { http, HttpResponse } from 'msw';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { config } from '@/config';
+import bilibiliCache from '@/routes/bilibili/cache';
+import server from '@/setup.test';
+import cache from '@/utils/cache';
+
+import { extractBilibiliOpusImages, extractBilibiliOpusImagesFromHtml, loginBilibiliWithPassword, parseBilibiliOpusArticle, renderBilibiliImages } from './bilibili-opus';
+
+vi.mock('@/utils/request-rewriter', () => ({}));
 
 describe('Bilibili Opus images', () => {
     it('extracts the images from the current Opus content modules', () => {
@@ -276,5 +286,103 @@ describe('Bilibili Opus images', () => {
                 height: 2640,
             },
         ]);
+    });
+});
+
+describe('Bilibili password authentication', () => {
+    const previousUsername = config.bilibili.username;
+    const previousPassword = config.bilibili.password;
+    const { publicKey: publicKeyObject, privateKey } = generateKeyPairSync('rsa', {
+        modulusLength: 1024,
+    });
+    const publicKey = publicKeyObject.export({
+        type: 'spki',
+        format: 'pem',
+    }) as string;
+
+    afterEach(() => {
+        config.bilibili.username = previousUsername;
+        config.bilibili.password = previousPassword;
+        cache.clients.memoryCache?.clear();
+    });
+
+    it('encrypts password with RSA salt and returns authenticated session cookies for Opus/article routes', async () => {
+        config.bilibili.username = 'user@example.com';
+        config.bilibili.password = 'my_secret_pwd';
+
+        let decryptedPayload = '';
+        server.use(
+            http.get('https://passport.bilibili.com/x/passport-login/web/key', () =>
+                HttpResponse.json({
+                    code: 0,
+                    data: {
+                        hash: 'salt_hash_123_',
+                        key: publicKey,
+                    },
+                })
+            ),
+            http.post('https://passport.bilibili.com/x/passport-login/oauth2/login', async ({ request }) => {
+                const body = new URLSearchParams(await request.text());
+                expect(body.get('username')).toBe('user@example.com');
+                expect(body.get('sign')).toMatch(/^[a-f0-9]{32}$/);
+                const encrypted = Buffer.from(body.get('password')!, 'base64');
+                decryptedPayload = privateDecrypt(
+                    {
+                        key: privateKey,
+                        padding: constants.RSA_PKCS1_PADDING,
+                    },
+                    encrypted
+                ).toString('utf8');
+
+                return HttpResponse.json({
+                    code: 0,
+                    data: {
+                        status: 0,
+                        cookie_info: {
+                            cookies: [
+                                { name: 'SESSDATA', value: 'sessdata_from_pwd' },
+                                { name: 'bili_jct', value: 'csrf_token_123' },
+                                { name: 'DedeUserID', value: '2267573' },
+                            ],
+                        },
+                    },
+                });
+            })
+        );
+
+        const cookie = await bilibiliCache.getAuthenticatedCookie();
+        expect(decryptedPayload).toBe('salt_hash_123_my_secret_pwd');
+        expect(cookie).toContain('SESSDATA=sessdata_from_pwd');
+        expect(cookie).toContain('bili_jct=csrf_token_123');
+        expect(cookie).toContain('DedeUserID=2267573');
+        expect(cookie).toMatch(/b_lsid=[0-9A-F]+_[0-9A-F]+/);
+    });
+
+    it('throws CaptchaError when Bilibili passport triggers Geetest verification', async () => {
+        server.use(
+            http.get('https://passport.bilibili.com/x/passport-login/web/key', () =>
+                HttpResponse.json({
+                    code: 0,
+                    data: {
+                        hash: 'salt_hash_123_',
+                        key: publicKey,
+                    },
+                })
+            ),
+            http.post('https://passport.bilibili.com/x/passport-login/oauth2/login', () =>
+                HttpResponse.json({
+                    code: -105,
+                    message: '验证码错误',
+                    data: {
+                        status: 0,
+                        url: 'https://www.bilibili.com/h5/project-msg-auth/verify?ct=geetest',
+                    },
+                })
+            )
+        );
+
+        await expect(loginBilibiliWithPassword('user@example.com', 'secret')).rejects.toMatchObject({
+            name: 'CaptchaError',
+        });
     });
 });

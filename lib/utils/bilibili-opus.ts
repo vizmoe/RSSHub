@@ -1,5 +1,14 @@
+import { constants, publicEncrypt } from 'node:crypto';
+
 import { load } from 'cheerio';
 import { encodeXML } from 'entities';
+
+import { config } from '@/config';
+import CaptchaError from '@/errors/types/captcha';
+import ConfigNotFoundError from '@/errors/types/config-not-found';
+import cache from '@/utils/cache';
+import md5 from '@/utils/md5';
+import ofetch from '@/utils/ofetch';
 
 export interface BilibiliOpusImage {
     url: string;
@@ -101,24 +110,25 @@ export const normalizeBilibiliImageUrl = (url: string) => {
 
 const normalizeBilibiliImages = (images: BilibiliOpusImage[]) => {
     const seen = new Set<string>();
+    const normalized: BilibiliOpusImage[] = [];
 
-    return images.flatMap((image) => {
+    for (const image of images) {
         if (!image.url) {
-            return [];
+            continue;
         }
         const url = normalizeBilibiliImageUrl(image.url);
         if (seen.has(url)) {
-            return [];
+            continue;
         }
         seen.add(url);
-        return [
-            {
-                url,
-                width: image.width,
-                height: image.height,
-            },
-        ];
-    });
+        normalized.push({
+            url,
+            width: image.width,
+            height: image.height,
+        });
+    }
+
+    return normalized;
 };
 
 const extractBilibiliOpusTopImages = (item?: BilibiliOpusItem) => item?.modules?.filter((module) => module.module_type === 'MODULE_TYPE_TOP').flatMap((module) => module.module_top?.display?.album?.pics ?? []) ?? [];
@@ -236,21 +246,19 @@ export const extractBilibiliOpusImagesFromHtml = (data: string): BilibiliOpusIma
     }
 
     const $ = load(data);
+    const parsedImages: BilibiliOpusImage[] = [];
+    for (const element of $('.opus-module-content img').toArray()) {
+        const image = $(element);
+        const url = image.attr('src');
+        if (!url) {
+            continue;
+        }
+        const width = Math.trunc(Number(image.attr('width') || '')) || undefined;
+        const height = Math.trunc(Number(image.attr('height') || '')) || undefined;
+        parsedImages.push({ url, width, height });
+    }
 
-    return normalizeBilibiliImages(
-        $('.opus-module-content img')
-            .toArray()
-            .flatMap((element) => {
-                const image = $(element);
-                const url = image.attr('src');
-                if (!url) {
-                    return [];
-                }
-                const width = Math.trunc(Number(image.attr('width') || '')) || undefined;
-                const height = Math.trunc(Number(image.attr('height') || '')) || undefined;
-                return [{ url, width, height }];
-            })
-    );
+    return normalizeBilibiliImages(parsedImages);
 };
 
 export const renderBilibiliImages = (images: BilibiliOpusImage[]) =>
@@ -262,3 +270,155 @@ export const renderBilibiliImages = (images: BilibiliOpusImage[]) =>
             return `<img ${attributes.join(' ')}>`;
         })
         .join('');
+
+const bilibiliOauthAppKey = 'bca7e84c2d947ac6';
+const bilibiliOauthAppSecret = '60698ba2f68e01ce44738920a0ffe768';
+
+export const encryptBilibiliPassword = (publicKeyPem: string, hash: string, password: string): string =>
+    publicEncrypt(
+        {
+            key: publicKeyPem,
+            padding: constants.RSA_PKCS1_PADDING,
+        },
+        Buffer.from(`${hash}${password}`, 'utf8')
+    ).toString('base64');
+
+export const signBilibiliOauthParams = (params: Record<string, string>, appSecret = bilibiliOauthAppSecret): string => {
+    const searchParams = new URLSearchParams(params);
+    searchParams.sort();
+    const sign = md5(`${searchParams.toString()}${appSecret}`);
+    searchParams.set('sign', sign);
+    return searchParams.toString();
+};
+
+const extractSetCookiesFromHeaders = (headers: Headers): Record<string, string> => {
+    const rawCookies = typeof headers.getSetCookie === 'function' ? headers.getSetCookie() : (headers.get('set-cookie')?.split(/,(?=[^;=]+=[^;])/) ?? []);
+    const cookies: Record<string, string> = {};
+    for (const rawCookie of rawCookies) {
+        const firstPart = rawCookie.split(';', 1)[0]?.trim();
+        if (!firstPart) {
+            continue;
+        }
+        const eqIndex = firstPart.indexOf('=');
+        if (eqIndex <= 0) {
+            continue;
+        }
+        const name = firstPart.slice(0, eqIndex).trim();
+        const value = firstPart.slice(eqIndex + 1).trim();
+        if (name && value && value !== 'deleted') {
+            cookies[name] = value;
+        }
+    }
+    return cookies;
+};
+
+interface BilibiliKeyResponse {
+    code?: number;
+    message?: string;
+    data?: {
+        hash?: string;
+        key?: string;
+    };
+}
+
+interface BilibiliOauthLoginResponse {
+    code?: number;
+    message?: string;
+    data?: {
+        status?: number;
+        message?: string;
+        url?: string;
+        cookie_info?: {
+            cookies?: Array<{
+                name?: string;
+                value?: string;
+            }>;
+        };
+    };
+}
+
+export const loginBilibiliWithPassword = async (username: string, password: string): Promise<string> => {
+    const keyResponse = await ofetch<BilibiliKeyResponse>('https://passport.bilibili.com/x/passport-login/web/key', {
+        headers: {
+            Referer: 'https://passport.bilibili.com/login',
+            'User-Agent': config.ua,
+        },
+    });
+    if (keyResponse.code !== 0 || !keyResponse.data?.hash || !keyResponse.data?.key) {
+        throw new ConfigNotFoundError(`Bilibili 登录公钥获取失败：${keyResponse.message || keyResponse.code}`);
+    }
+
+    const encryptedPassword = encryptBilibiliPassword(keyResponse.data.key, keyResponse.data.hash, password);
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const body = signBilibiliOauthParams({
+        appkey: bilibiliOauthAppKey,
+        password: encryptedPassword,
+        ts: String(nowSeconds),
+        username,
+    });
+
+    const response = await ofetch.raw<BilibiliOauthLoginResponse>('https://passport.bilibili.com/x/passport-login/oauth2/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            Referer: 'https://passport.bilibili.com/login',
+            'User-Agent': config.ua,
+        },
+        body,
+    });
+
+    const payload = response._data;
+    const message = payload?.data?.message || payload?.message || '';
+    if (payload?.code === -105 || payload?.data?.url?.includes('geetest') || message.includes('验证码')) {
+        throw new CaptchaError('Bilibili 账号密码登录触发源站验证码风控，请配置 BILIBILI_COOKIE_* 或稍后再试。');
+    }
+    if (payload?.code !== 0 || (payload.data?.status !== undefined && payload.data.status !== 0)) {
+        throw new ConfigNotFoundError(`Bilibili 账号密码登录失败：${message || payload?.code}`);
+    }
+
+    const cookies: Record<string, string> = extractSetCookiesFromHeaders(response.headers);
+    const cookieItems = payload.data?.cookie_info?.cookies ?? [];
+    for (const item of cookieItems) {
+        if (item.name && item.value) {
+            cookies[item.name] = item.value;
+        }
+    }
+    if (payload.data?.url) {
+        try {
+            const callbackUrl = new URL(payload.data.url);
+            for (const key of ['SESSDATA', 'bili_jct', 'DedeUserID', 'DedeUserID__ckMd5', 'sid']) {
+                const value = callbackUrl.searchParams.get(key);
+                if (value) {
+                    cookies[key] = value;
+                }
+            }
+        } catch {
+            // Ignore malformed callback URLs when cookies were already extracted.
+        }
+    }
+
+    if (!cookies.SESSDATA && Object.keys(cookies).length === 0) {
+        throw new ConfigNotFoundError('Bilibili 账号密码登录未返回有效会话 Cookie。');
+    }
+
+    return Object.entries(cookies)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('; ');
+};
+
+export const getBilibiliPasswordCookie = async (forceRefresh = false): Promise<string | undefined> => {
+    const username = config.bilibili.username?.trim();
+    const password = config.bilibili.password;
+    if (!username || !password) {
+        return;
+    }
+
+    const cacheKey = `bilibili:auth:password:${md5(`${username}:${password}`)}`;
+    if (forceRefresh) {
+        const cookie = await loginBilibiliWithPassword(username, password);
+        await cache.set(cacheKey, cookie, config.cache.contentExpire);
+        return cookie;
+    }
+
+    return (await cache.tryGet(cacheKey, () => loginBilibiliWithPassword(username, password), config.cache.contentExpire, false)) as string;
+};

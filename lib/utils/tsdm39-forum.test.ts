@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import app from '@/app';
 import { config } from '@/config';
+import { route as ritdonRoute } from '@/routes/ritdon/forum';
 import { route } from '@/routes/tsdm39/forum';
 import server from '@/setup.test';
 import type { Data } from '@/types';
@@ -13,8 +14,14 @@ import cache from '@/utils/cache';
 vi.mock('@/utils/request-rewriter', () => ({}));
 
 const rootUrl = 'https://www.tsdm39.com';
+const ritdonRootUrl = 'https://ritdon.com';
 const cookie = 'test-only-session=value';
 const previousCookie = config.tsdm39.cookie;
+const previousUsername = config.tsdm39.username;
+const previousPassword = config.tsdm39.password;
+const previousRitdonCookie = config.ritdon.cookie;
+const previousRitdonUsername = config.ritdon.username;
+const previousRitdonPassword = config.ritdon.password;
 const requests: Request[] = [];
 const loginPage = '<div id="messagetext"><p>抱歉，您尚未登录，没有权限访问该版块</p></div><div id="messagelogin"></div>';
 const deniedPage = '<div id="messagetext"><p>抱歉，您没有权限访问该版块</p></div>';
@@ -49,6 +56,7 @@ const threadPage = `<div id="postlist">
 </div>`;
 
 const invoke = async (fid = '702', limit?: string) => (await route.handler({ req: { param: () => fid, query: (name: string) => (name === 'limit' ? limit : undefined) } } as unknown as Context)) as Data;
+const invokeRitdon = async (fid = '39', limit?: string) => (await ritdonRoute.handler({ req: { param: () => fid, query: (name: string) => (name === 'limit' ? limit : undefined) } } as unknown as Context)) as Data;
 
 function respondWith(list: string, detail = threadPage) {
     server.use(
@@ -61,6 +69,11 @@ function respondWith(list: string, detail = threadPage) {
 
 beforeEach(() => {
     config.tsdm39.cookie = cookie;
+    config.tsdm39.username = undefined;
+    config.tsdm39.password = undefined;
+    config.ritdon.cookie = undefined;
+    config.ritdon.username = undefined;
+    config.ritdon.password = undefined;
     requests.length = 0;
     cache.clients.memoryCache?.clear();
     respondWith(forumPage());
@@ -68,6 +81,11 @@ beforeEach(() => {
 
 afterEach(() => {
     config.tsdm39.cookie = previousCookie;
+    config.tsdm39.username = previousUsername;
+    config.tsdm39.password = previousPassword;
+    config.ritdon.cookie = previousRitdonCookie;
+    config.ritdon.username = previousRitdonUsername;
+    config.ritdon.password = previousRitdonPassword;
 });
 
 describe('TSDM forum subscriptions', () => {
@@ -205,5 +223,75 @@ describe('TSDM forum subscriptions', () => {
         expect(feed.item).toHaveLength(8);
         expect(maximum).toBeGreaterThan(1);
         expect(maximum).toBeLessThanOrEqual(3);
+    });
+
+    it('authenticates with TSDM39_USERNAME and TSDM39_PASSWORD when cookie is not configured or expired', async () => {
+        config.tsdm39.cookie = 'expired_cookie=1';
+        config.tsdm39.username = 'tsdm_user';
+        config.tsdm39.password = 'tsdm_secret';
+
+        let loginCalls = 0;
+        server.use(
+            http.post(`${rootUrl}/member.php`, async ({ request }) => {
+                loginCalls++;
+                const body = new URLSearchParams(await request.text());
+                expect(body.get('username')).toBe('tsdm_user');
+                expect(body.get('password')).toBe('tsdm_secret');
+                return new HttpResponse('<?xml version="1.0" encoding="utf-8"?><root><![CDATA[欢迎您回来]]></root>', {
+                    headers: [
+                        ['Set-Cookie', 'Ystv_2132_saltkey=salt123; Path=/; HttpOnly'],
+                        ['Set-Cookie', 'Ystv_2132_auth=auth456; Path=/; HttpOnly'],
+                    ],
+                });
+            }),
+            http.get(`${rootUrl}/forum.php`, ({ request }) => {
+                requests.push(request);
+                if (request.headers.get('cookie') === 'expired_cookie=1') {
+                    return HttpResponse.html(loginPage);
+                }
+                return HttpResponse.html(new URL(request.url).searchParams.get('mod') === 'forumdisplay' ? forumPage(threadRow(100)) : threadPage);
+            })
+        );
+
+        const feed = await invoke('702', '1');
+        expect(loginCalls).toBe(1);
+        expect(feed.item).toHaveLength(1);
+        expect(requests.at(-1)?.headers.get('cookie')).toBe('Ystv_2132_saltkey=salt123; Ystv_2132_auth=auth456');
+    });
+
+    it('supports ritdon.com forum subscriptions with both cookie and username/password authentication', async () => {
+        config.ritdon.username = 'reader@example.com';
+        config.ritdon.password = 'ritdon_secret';
+
+        let loginCalls = 0;
+        server.use(
+            http.post(`${ritdonRootUrl}/member.php`, async ({ request }) => {
+                loginCalls++;
+                const body = new URLSearchParams(await request.text());
+                expect(body.get('username')).toBe('reader@example.com');
+                expect(body.get('loginfield')).toBe('email');
+                return new HttpResponse('<?xml version="1.0" encoding="utf-8"?><root><![CDATA[欢迎您回来]]></root>', {
+                    headers: [
+                        ['Set-Cookie', 'ST0N_2132_saltkey=ritdon_salt; Path=/; HttpOnly'],
+                        ['Set-Cookie', 'ST0N_2132_auth=ritdon_auth; Path=/; HttpOnly'],
+                    ],
+                });
+            }),
+            http.get(`${ritdonRootUrl}/forum.php`, ({ request }) => {
+                requests.push(request);
+                expect(request.headers.get('cookie')).toBe('ST0N_2132_saltkey=ritdon_salt; ST0N_2132_auth=ritdon_auth');
+                return HttpResponse.html(new URL(request.url).searchParams.get('mod') === 'forumdisplay' ? forumPage(threadRow(3901)).replace('测试版块 - 天使动漫', '轻小说区 - 深夜读书会') : threadPage);
+            })
+        );
+
+        const feed = await invokeRitdon('39', '1');
+        expect(loginCalls).toBe(1);
+        expect(feed.title).toBe('深夜读书会 - 测试版块');
+        expect(feed.link).toBe(`${ritdonRootUrl}/forum.php?mod=forumdisplay&fid=39`);
+        expect(feed.item).toHaveLength(1);
+        expect(feed.item![0]).toMatchObject({
+            title: '主题 3901',
+            link: `${ritdonRootUrl}/forum.php?mod=viewthread&tid=3901`,
+        });
     });
 });

@@ -25,6 +25,16 @@ export const route: Route = {
                 optional: true,
                 description: '配置 BILIBILI_COOKIE_{loginUid} 后，可在路由末尾传入 loginUid，使用该登录用户已有的访问权限读取其已解锁的图文正文。',
             },
+            {
+                name: 'BILIBILI_USERNAME',
+                optional: true,
+                description: 'Bilibili 登录账号（手机号或邮箱，配合 BILIBILI_PASSWORD 使用）。',
+            },
+            {
+                name: 'BILIBILI_PASSWORD',
+                optional: true,
+                description: 'Bilibili 登录密码（配合 BILIBILI_USERNAME 使用）。',
+            },
         ],
         requirePuppeteer: false,
         antiCrawler: false,
@@ -41,13 +51,13 @@ export const route: Route = {
     name: 'UP 主图文',
     maintainers: ['lengthmin', 'Qixingchen', 'hyoban'],
     handler,
-    description: '逐篇抓取图文正文。配置 BILIBILI\\_COOKIE\\_{loginUid} 后，可通过 loginUid 参数选择登录用户，并使用该账号已有的访问权限读取其已解锁的充电专属内容。未配置时仅返回公开内容或预览。',
+    description: String.raw`逐篇抓取图文正文。配置 BILIBILI\_COOKIE\_{loginUid} 或 BILIBILI\_USERNAME + BILIBILI\_PASSWORD 后，可使用该账号已有的访问权限读取其已解锁的充电专属内容。未配置时仅返回公开内容或预览。`,
 };
 
 async function handler(ctx) {
     const uid = ctx.req.param('uid');
     const loginUid = ctx.req.param('loginUid');
-    const cookie = loginUid ? config.bilibili.cookies[loginUid] : cache.getConfiguredCookie();
+    const cookie = await cache.getAuthenticatedCookie(loginUid);
 
     if (loginUid && !cookie) {
         throw new ConfigNotFoundError(`Missing BILIBILI_COOKIE_${loginUid}`);

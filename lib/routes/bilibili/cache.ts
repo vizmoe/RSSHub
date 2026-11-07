@@ -3,6 +3,7 @@ import { FetchError } from 'ofetch';
 import { RateLimiterMemory, RateLimiterQueue } from 'rate-limiter-flexible';
 
 import { config } from '@/config';
+import { getBilibiliPasswordCookie } from '@/utils/bilibili-opus';
 import cache from '@/utils/cache';
 import got from '@/utils/got';
 import { isWorker } from '@/utils/is-worker';
@@ -39,12 +40,41 @@ const getConfiguredCookie = () => {
     return config.bilibili.cookies[Object.keys(config.bilibili.cookies)[Math.floor(Math.random() * Object.keys(config.bilibili.cookies).length)]] || '';
 };
 
-let anonymousCookiePromise: Promise<string> | undefined;
+const getPasswordCookie = async (forceRefresh = false) => {
+    const cookie = await getBilibiliPasswordCookie(forceRefresh);
+    if (!cookie) {
+        return;
+    }
+    return /b_lsid=[0-9A-F]+_[0-9A-F]+/.test(cookie) ? cookie.replace(/b_lsid=[0-9A-F]+_[0-9A-F]+/, () => `b_lsid=${utils.lsid()}`) : `${cookie}; b_lsid=${utils.lsid()}`;
+};
 
-const getCookie = (disableConfig = false) => {
-    const configuredCookie = disableConfig ? undefined : getConfiguredCookie();
+const getAuthenticatedCookie = async (loginUid?: string) => {
+    if (loginUid) {
+        const uidCookie = config.bilibili.cookies[loginUid];
+        if (uidCookie) {
+            const updatedCookie = uidCookie.replace(/b_lsid=[0-9A-F]+_[0-9A-F]+/, () => `b_lsid=${utils.lsid()}`);
+            config.bilibili.cookies[loginUid] = updatedCookie;
+            return updatedCookie;
+        }
+        return await getPasswordCookie();
+    }
+
+    const configuredCookie = getConfiguredCookie();
     if (configuredCookie !== undefined) {
         return configuredCookie;
+    }
+
+    return await getPasswordCookie();
+};
+
+let anonymousCookiePromise: Promise<string> | undefined;
+
+const getCookie = async (disableConfig = false) => {
+    if (!disableConfig) {
+        const authenticatedCookie = await getAuthenticatedCookie();
+        if (authenticatedCookie !== undefined) {
+            return authenticatedCookie;
+        }
     }
 
     if (anonymousCookiePromise) {
@@ -127,7 +157,7 @@ const getVisitorCookie = () =>
 const getWbiVerifyString = () => {
     const key = 'bili-wbi-verify-string';
     return cache.tryGet(key, async () => {
-        const cookie = getConfiguredCookie() ?? (await getVisitorCookie());
+        const cookie = (await getAuthenticatedCookie()) ?? (await getVisitorCookie());
         const { data: navResponse } = await got('https://api.bilibili.com/x/web-interface/nav', {
             headers: {
                 Referer: 'https://www.bilibili.com/',
@@ -403,6 +433,8 @@ const getArticleDataFromCvid = async (cvid, uid) => {
 export default {
     getCookie,
     getConfiguredCookie,
+    getPasswordCookie,
+    getAuthenticatedCookie,
     getVisitorCookie,
     getWbiVerifyString,
     getUsernameFromUID,
