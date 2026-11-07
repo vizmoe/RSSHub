@@ -40,8 +40,8 @@ const getConfiguredCookie = () => {
     return config.bilibili.cookies[Object.keys(config.bilibili.cookies)[Math.floor(Math.random() * Object.keys(config.bilibili.cookies).length)]] || '';
 };
 
-const getPasswordCookie = async (forceRefresh = false) => {
-    const cookie = await getBilibiliPasswordCookie(forceRefresh);
+const getPasswordCookie = async (loginUid?: string, forceRefresh = false) => {
+    const cookie = await getBilibiliPasswordCookie(loginUid, forceRefresh);
     if (!cookie) {
         return;
     }
@@ -56,7 +56,7 @@ const getAuthenticatedCookie = async (loginUid?: string) => {
             config.bilibili.cookies[loginUid] = updatedCookie;
             return updatedCookie;
         }
-        return await getPasswordCookie();
+        return await getPasswordCookie(loginUid);
     }
 
     const configuredCookie = getConfiguredCookie();

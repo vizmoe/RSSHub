@@ -11,21 +11,25 @@ describe('config', () => {
     it('bilibilib cookie', async () => {
         process.env.BILIBILI_COOKIE_12 = 'cookie1';
         process.env.BILIBILI_COOKIE_34 = 'cookie2';
-        process.env.BILIBILI_USERNAME = 'bili@example.com';
-        process.env.BILIBILI_PASSWORD = 'bili-password';
+        process.env.BILIBILI_USERNAME_760451 = 'bili760451@example.com';
+        process.env.BILIBILI_PASSWORD_760451 = 'bili760451-password';
 
         const { config } = await import('./config');
         expect(config.bilibili.cookies).toMatchObject({
             12: 'cookie1',
             34: 'cookie2',
         });
-        expect(config.bilibili.username).toBe('bili@example.com');
-        expect(config.bilibili.password).toBe('bili-password');
+        expect(config.bilibili.usernames).toMatchObject({
+            760451: 'bili760451@example.com',
+        });
+        expect(config.bilibili.passwords).toMatchObject({
+            760451: 'bili760451-password',
+        });
 
         delete process.env.BILIBILI_COOKIE_12;
         delete process.env.BILIBILI_COOKIE_34;
-        delete process.env.BILIBILI_USERNAME;
-        delete process.env.BILIBILI_PASSWORD;
+        delete process.env.BILIBILI_USERNAME_760451;
+        delete process.env.BILIBILI_PASSWORD_760451;
     });
 
     it('unix socket', async () => {

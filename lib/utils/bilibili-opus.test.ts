@@ -292,6 +292,8 @@ describe('Bilibili Opus images', () => {
 describe('Bilibili password authentication', () => {
     const previousUsername = config.bilibili.username;
     const previousPassword = config.bilibili.password;
+    const previousUsernames = { ...config.bilibili.usernames };
+    const previousPasswords = { ...config.bilibili.passwords };
     const { publicKey: publicKeyObject, privateKey } = generateKeyPairSync('rsa', {
         modulusLength: 1024,
     });
@@ -303,12 +305,14 @@ describe('Bilibili password authentication', () => {
     afterEach(() => {
         config.bilibili.username = previousUsername;
         config.bilibili.password = previousPassword;
+        config.bilibili.usernames = { ...previousUsernames };
+        config.bilibili.passwords = { ...previousPasswords };
         cache.clients.memoryCache?.clear();
     });
 
-    it('encrypts password with RSA salt and returns authenticated session cookies for Opus/article routes', async () => {
-        config.bilibili.username = 'user@example.com';
-        config.bilibili.password = 'my_secret_pwd';
+    it('encrypts password with RSA salt and returns authenticated session cookies for BILIBILI_USERNAME_{uid} and BILIBILI_PASSWORD_{uid}', async () => {
+        config.bilibili.usernames['760451'] = 'user@example.com';
+        config.bilibili.passwords['760451'] = 'my_secret_pwd';
 
         let decryptedPayload = '';
         server.use(

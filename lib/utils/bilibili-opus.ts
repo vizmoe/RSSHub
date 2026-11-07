@@ -406,13 +406,39 @@ export const loginBilibiliWithPassword = async (username: string, password: stri
         .join('; ');
 };
 
-export const getBilibiliPasswordCookie = async (forceRefresh = false): Promise<string | undefined> => {
-    const username = config.bilibili.username?.trim();
-    const password = config.bilibili.password;
-    if (!username || !password) {
+const resolveBilibiliPasswordCredentials = (loginUid?: string): { username: string; password: string } | undefined => {
+    if (loginUid) {
+        const uidUsername = config.bilibili.usernames?.[loginUid]?.trim();
+        const uidPassword = config.bilibili.passwords?.[loginUid];
+        if (uidUsername && uidPassword) {
+            return { username: uidUsername, password: uidPassword };
+        }
+    } else {
+        const uidKeys = Object.keys(config.bilibili.usernames ?? {}).filter((uid) => config.bilibili.usernames[uid]?.trim() && config.bilibili.passwords?.[uid]);
+        if (uidKeys.length > 0) {
+            const randomIndex = Math.floor(Math.random() * uidKeys.length);
+            const selectedUid = uidKeys[randomIndex];
+            return {
+                username: config.bilibili.usernames[selectedUid]!.trim(),
+                password: config.bilibili.passwords[selectedUid]!,
+            };
+        }
+    }
+
+    const fallbackUsername = config.bilibili.username?.trim();
+    const fallbackPassword = config.bilibili.password;
+    if (fallbackUsername && fallbackPassword) {
+        return { username: fallbackUsername, password: fallbackPassword };
+    }
+};
+
+export const getBilibiliPasswordCookie = async (loginUid?: string, forceRefresh = false): Promise<string | undefined> => {
+    const credentials = resolveBilibiliPasswordCredentials(loginUid);
+    if (!credentials) {
         return;
     }
 
+    const { username, password } = credentials;
     const cacheKey = `bilibili:auth:password:${md5(`${username}:${password}`)}`;
     if (forceRefresh) {
         const cookie = await loginBilibiliWithPassword(username, password);

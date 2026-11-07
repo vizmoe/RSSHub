@@ -26,14 +26,14 @@ export const route: Route = {
                 description: '配置 BILIBILI_COOKIE_{loginUid} 后，可在路由末尾传入 loginUid，使用该登录用户已有的访问权限读取其已解锁的图文正文。',
             },
             {
-                name: 'BILIBILI_USERNAME',
+                name: 'BILIBILI_USERNAME_*',
                 optional: true,
-                description: 'Bilibili 登录账号（手机号或邮箱，配合 BILIBILI_PASSWORD 使用）。',
+                description: '配置 BILIBILI_USERNAME_{loginUid} 对应的 Bilibili 登录账号（手机号或邮箱，配合 BILIBILI_PASSWORD_{loginUid} 使用）。',
             },
             {
-                name: 'BILIBILI_PASSWORD',
+                name: 'BILIBILI_PASSWORD_*',
                 optional: true,
-                description: 'Bilibili 登录密码（配合 BILIBILI_USERNAME 使用）。',
+                description: '配置 BILIBILI_PASSWORD_{loginUid} 对应的 Bilibili 登录密码（配合 BILIBILI_USERNAME_{loginUid} 使用）。',
             },
         ],
         requirePuppeteer: false,
@@ -51,7 +51,7 @@ export const route: Route = {
     name: 'UP 主图文',
     maintainers: ['lengthmin', 'Qixingchen', 'hyoban'],
     handler,
-    description: String.raw`逐篇抓取图文正文。配置 BILIBILI\_COOKIE\_{loginUid} 或 BILIBILI\_USERNAME + BILIBILI\_PASSWORD 后，可使用该账号已有的访问权限读取其已解锁的充电专属内容。未配置时仅返回公开内容或预览。`,
+    description: String.raw`逐篇抓取图文正文。配置 BILIBILI\_COOKIE\_{loginUid} 或 BILIBILI\_USERNAME\_{loginUid} + BILIBILI\_PASSWORD\_{loginUid} 后，可使用该账号已有的访问权限读取其已解锁的充电专属内容。未配置时仅返回公开内容或预览。`,
 };
 
 async function handler(ctx) {
