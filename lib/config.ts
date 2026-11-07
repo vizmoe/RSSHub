@@ -91,6 +91,8 @@ type ConfigEnvKeys =
     // Route-specific (dynamic cookies with prefixes)
     | 'BAIDU_COOKIE'
     | `BILIBILI_COOKIE_${string}`
+    | 'BILIBILI_USERNAME'
+    | 'BILIBILI_PASSWORD'
     | 'BILIBILI_DM_IMG_LIST'
     | 'BILIBILI_DM_IMG_INTER'
     | 'BILIBILI_EXCLUDE_SUBTITLES'
@@ -153,6 +155,11 @@ type ConfigEnvKeys =
     | 'KEMONO_ROOT_URL'
     | 'KEYLOL_COOKIE'
     | 'LASTFM_API_KEY'
+    | 'LIGHTNOVEL_APP_COOKIE'
+    | 'LIGHTNOVEL_APP_TOKEN'
+    | 'LIGHTNOVEL_APP_EMAIL'
+    | 'LIGHTNOVEL_APP_USERNAME'
+    | 'LIGHTNOVEL_APP_PASSWORD'
     | 'LOCALS_SESSION'
     | 'LOFTER_COOKIE'
     | 'LORIENTLEJOUR_TOKEN'
@@ -200,6 +207,10 @@ type ConfigEnvKeys =
     | 'QINGTING_ID'
     | 'READWISE_ACCESS_TOKEN'
     | 'REUTERS_AUTH_TOKEN'
+    | 'RITDON_COOKIE'
+    | 'RITDON_COOKIES'
+    | 'RITDON_USERNAME'
+    | 'RITDON_PASSWORD'
     | 'SARABA1ST_COOKIE'
     | 'SARABA1ST_HOST'
     | 'SEHUATANG_COOKIE'
@@ -228,7 +239,10 @@ type ConfigEnvKeys =
     | 'TELEGRAM_PROXY_PORT'
     | 'TELEGRAM_PROXY_SECRET'
     | 'TOPHUB_COOKIE'
+    | 'TSDM39_COOKIE'
     | 'TSDM39_COOKIES'
+    | 'TSDM39_USERNAME'
+    | 'TSDM39_PASSWORD'
     | 'TUMBLR_CLIENT_ID'
     | 'TUMBLR_CLIENT_SECRET'
     | 'TUMBLR_REFRESH_TOKEN'
@@ -387,6 +401,8 @@ export type Config = {
     };
     bilibili: {
         cookies: Record<string, string | undefined>;
+        username?: string;
+        password?: string;
         dmImgList?: string;
         dmImgInter?: string;
         excludeSubtitles?: boolean;
@@ -537,6 +553,11 @@ export type Config = {
     lightnovel: {
         cookie?: string;
     };
+    lightnovelApp: {
+        cookie?: string;
+        email?: string;
+        password?: string;
+    };
     locals: {
         session?: string;
     };
@@ -640,6 +661,11 @@ export type Config = {
     reuters: {
         authToken?: string;
     };
+    ritdon: {
+        cookie?: string;
+        username?: string;
+        password?: string;
+    };
     saraba1st: {
         cookie?: string;
         host?: string;
@@ -700,7 +726,9 @@ export type Config = {
         cookie?: string;
     };
     tsdm39: {
-        cookie: string;
+        cookie?: string;
+        username?: string;
+        password?: string;
     };
     tumblr: {
         clientId?: string;
@@ -943,6 +971,8 @@ const calculateValue = () => {
         },
         bilibili: {
             cookies: bilibili_cookies,
+            username: envs.BILIBILI_USERNAME,
+            password: envs.BILIBILI_PASSWORD,
             dmImgList: envs.BILIBILI_DM_IMG_LIST,
             dmImgInter: envs.BILIBILI_DM_IMG_INTER,
             excludeSubtitles: toBoolean(envs.BILIBILI_EXCLUDE_SUBTITLES, false),
@@ -1093,6 +1123,11 @@ const calculateValue = () => {
         lightnovel: {
             cookie: envs.SECURITY_KEY,
         },
+        lightnovelApp: {
+            cookie: envs.LIGHTNOVEL_APP_COOKIE ?? envs.LIGHTNOVEL_APP_TOKEN,
+            email: envs.LIGHTNOVEL_APP_EMAIL ?? envs.LIGHTNOVEL_APP_USERNAME,
+            password: envs.LIGHTNOVEL_APP_PASSWORD,
+        },
         locals: {
             session: envs.LOCALS_SESSION,
         },
@@ -1196,6 +1231,11 @@ const calculateValue = () => {
         reuters: {
             authToken: envs.REUTERS_AUTH_TOKEN,
         },
+        ritdon: {
+            cookie: envs.RITDON_COOKIES ?? envs.RITDON_COOKIE,
+            username: envs.RITDON_USERNAME,
+            password: envs.RITDON_PASSWORD,
+        },
         saraba1st: {
             cookie: envs.SARABA1ST_COOKIE,
             host: envs.SARABA1ST_HOST || 'https://stage1st.com',
@@ -1256,7 +1296,9 @@ const calculateValue = () => {
             cookie: envs.TOPHUB_COOKIE,
         },
         tsdm39: {
-            cookie: envs.TSDM39_COOKIES,
+            cookie: envs.TSDM39_COOKIES ?? envs.TSDM39_COOKIE,
+            username: envs.TSDM39_USERNAME,
+            password: envs.TSDM39_PASSWORD,
         },
         tumblr: {
             clientId: envs.TUMBLR_CLIENT_ID,

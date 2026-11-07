@@ -89,6 +89,7 @@ jobs:
                   lib/utils/telegram-message.test.ts
                   lib/api/sspai-image.test.ts
                   lib/utils/tsdm39-forum.test.ts
+                  lib/utils/lightnovel-app.test.ts
 
     build:
         needs: [prepare, verify]

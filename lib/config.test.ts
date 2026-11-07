@@ -11,15 +11,21 @@ describe('config', () => {
     it('bilibilib cookie', async () => {
         process.env.BILIBILI_COOKIE_12 = 'cookie1';
         process.env.BILIBILI_COOKIE_34 = 'cookie2';
+        process.env.BILIBILI_USERNAME = 'bili@example.com';
+        process.env.BILIBILI_PASSWORD = 'bili-password';
 
         const { config } = await import('./config');
         expect(config.bilibili.cookies).toMatchObject({
             12: 'cookie1',
             34: 'cookie2',
         });
+        expect(config.bilibili.username).toBe('bili@example.com');
+        expect(config.bilibili.password).toBe('bili-password');
 
         delete process.env.BILIBILI_COOKIE_12;
         delete process.env.BILIBILI_COOKIE_34;
+        delete process.env.BILIBILI_USERNAME;
+        delete process.env.BILIBILI_PASSWORD;
     });
 
     it('unix socket', async () => {
@@ -193,6 +199,51 @@ describe('config', () => {
             expect(config.ua).toBe('test');
         });
         delete process.env.REMOTE_CONFIG;
+    });
+
+    it('lightnovel.app config', async () => {
+        process.env.LIGHTNOVEL_APP_COOKIE = 'RefreshToken=test-refresh-token';
+        process.env.LIGHTNOVEL_APP_EMAIL = 'user@example.com';
+        process.env.LIGHTNOVEL_APP_PASSWORD = 'secret';
+
+        const { config } = await import('./config');
+        expect(config.lightnovelApp).toEqual({
+            cookie: 'RefreshToken=test-refresh-token',
+            email: 'user@example.com',
+            password: 'secret',
+        });
+
+        delete process.env.LIGHTNOVEL_APP_COOKIE;
+        delete process.env.LIGHTNOVEL_APP_EMAIL;
+        delete process.env.LIGHTNOVEL_APP_PASSWORD;
+    });
+
+    it('tsdm39 and ritdon config', async () => {
+        process.env.TSDM39_COOKIES = 'tsdm-cookie';
+        process.env.TSDM39_USERNAME = 'tsdm-user';
+        process.env.TSDM39_PASSWORD = 'tsdm-password';
+        process.env.RITDON_COOKIES = 'ritdon-cookie';
+        process.env.RITDON_USERNAME = 'ritdon-user';
+        process.env.RITDON_PASSWORD = 'ritdon-password';
+
+        const { config } = await import('./config');
+        expect(config.tsdm39).toEqual({
+            cookie: 'tsdm-cookie',
+            username: 'tsdm-user',
+            password: 'tsdm-password',
+        });
+        expect(config.ritdon).toEqual({
+            cookie: 'ritdon-cookie',
+            username: 'ritdon-user',
+            password: 'ritdon-password',
+        });
+
+        delete process.env.TSDM39_COOKIES;
+        delete process.env.TSDM39_USERNAME;
+        delete process.env.TSDM39_PASSWORD;
+        delete process.env.RITDON_COOKIES;
+        delete process.env.RITDON_USERNAME;
+        delete process.env.RITDON_PASSWORD;
     });
 });
 
