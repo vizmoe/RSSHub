@@ -13,14 +13,34 @@ on:
 jobs:
     check-duplicates:
         runs-on: ubuntu-latest
+        timeout-minutes: 10
         permissions:
             contents: read
             issues: write
         steps:
+            - name: Check duplicate-check configuration
+              id: configuration
+              shell: bash
+              env:
+                  CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+              run: |
+                  if [[ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]]; then
+                      if [[ "$GITHUB_EVENT_NAME" == 'workflow_dispatch' ]]; then
+                          echo '::error::Set the CLAUDE_CODE_OAUTH_TOKEN repository secret before requesting a duplicate-issue check.'
+                          exit 1
+                      fi
+                      echo 'enabled=false' >> "$GITHUB_OUTPUT"
+                      echo 'Duplicate-issue check skipped: CLAUDE_CODE_OAUTH_TOKEN is not configured.' >> "$GITHUB_STEP_SUMMARY"
+                  else
+                      echo 'enabled=true' >> "$GITHUB_OUTPUT"
+                  fi
+
             - name: Checkout repository
+              if: steps.configuration.outputs.enabled == 'true'
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
             - name: Check for duplicate issues
+              if: steps.configuration.outputs.enabled == 'true'
               uses: anthropics/claude-code-action@v1
               env:
                   GH_TOKEN: ${{ github.token }}
@@ -32,7 +52,7 @@ jobs:
                   display_report: 'true'
                   allowed_non_write_users: '*'
                   claude_args: |
-                      --model ${{ vars.OPENCODE_MODEL }}
+                      ${{ vars.OPENCODE_MODEL && format('--model {0}', vars.OPENCODE_MODEL) || '' }}
                       ${{ vars.CLAUDE_EFFORT && format('--effort {0}', vars.CLAUDE_EFFORT) || '' }}
                       --allowedTools "Bash(gh issue:*),Bash(gh search:*)"
                       --disallowedTools "WebFetch,WebSearch"
